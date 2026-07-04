@@ -1,0 +1,9 @@
+packages:
+  - "."
+
+minimumReleaseAgeExclude:
+  - "@achorde/source-catalog@0.1.0"
+
+allowBuilds:
+  esbuild: true
+  sharp: true
