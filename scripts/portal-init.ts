@@ -30,11 +30,11 @@ config = config
   .replace(/publicName: "Demo Artist Portal"/, `publicName: "${publicName}"`);
 
 if (siteUrl) {
-  config = config.replace(/siteUrl: "https:\/\/achorde.github.io"/, `siteUrl: "${siteUrl}"`);
+  config = config.replace(/siteUrl: "[^"]*"/, `siteUrl: "${siteUrl}"`);
 }
 
 if (repositoryUrl) {
-  config = config.replace(/repositoryUrl: "https:\/\/github.com\/achorde\/artist-portal-base"/, `repositoryUrl: "${repositoryUrl}"`);
+  config = config.replace(/repositoryUrl: "[^"]*"/, `repositoryUrl: "${repositoryUrl}"`);
 }
 
 await writeFile(configPath, config);

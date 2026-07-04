@@ -47,7 +47,7 @@ pnpm portal:init --source-id my-artist --name "My Artist"
 ## Create a Portal With `gh`
 
 ```bash
-git clone https://github.com/achorde/artist-portal-base.git my-artist-portal
+git clone https://github.com/saitodisse/artist-portal-base.git my-artist-portal
 cd my-artist-portal
 git remote rename origin upstream
 pnpm portal:init --source-id my-artist --name "My Artist" --site-url https://my-org.github.io --repository-url https://github.com/my-org/my-artist-portal
@@ -62,7 +62,7 @@ gh repo create my-org/my-artist-portal --public --source . --remote origin --pus
 4. Push `main`.
 
 ```bash
-git clone https://github.com/achorde/artist-portal-base.git my-artist-portal
+git clone https://github.com/saitodisse/artist-portal-base.git my-artist-portal
 cd my-artist-portal
 git remote rename origin upstream
 git remote add origin https://github.com/my-org/my-artist-portal.git

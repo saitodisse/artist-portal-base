@@ -24,12 +24,12 @@ const portalConfig = {
   name: "Demo Artist Portal",
   publicName: "Demo Artist Portal",
   description: "A fictional achorde-compatible artist portal used as a starting point.",
-  siteUrl: "https://achorde.github.io",
+  siteUrl: "https://saitodisse.github.io",
   basePath: "/artist-portal-base",
-  repositoryUrl: "https://github.com/achorde/artist-portal-base",
+  repositoryUrl: "https://github.com/saitodisse/artist-portal-base",
   links: [
-    { label: "Repository", url: "https://github.com/achorde/artist-portal-base" },
-    { label: "Import catalog", url: "/source-catalog/" },
+    { label: "Repository", url: "https://github.com/saitodisse/artist-portal-base" },
+    { label: "Import catalog", url: "source-catalog/" },
   ],
   theme: {
     accent: "#d14b2f",
