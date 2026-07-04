@@ -2,6 +2,8 @@
 
 Base repository for static achorde artist portals. A portal publishes a human-readable site and an importable read-only source catalog under `/source-catalog/`.
 
+Published demo: <https://saitodisse.github.io/artist-portal-base/>
+
 The base is meant to remain updateable. Create each real portal as a new repository with an `upstream` remote pointing back to this base, then pull base improvements with:
 
 ```bash
