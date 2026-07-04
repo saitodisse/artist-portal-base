@@ -1,0 +1,154 @@
+---
+import portal from "../../portal.config";
+import { ChartList } from "../components/ChartList";
+import { loadCatalogDraft } from "../../scripts/catalog-core";
+
+const draft = await loadCatalogDraft();
+const charts = draft.charts.map((chart) => ({
+  id: chart.id,
+  title: chart.version.title,
+  sourceKey: chart.version.sourceKey,
+  href: `#${chart.id}`,
+}));
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{portal.publicName}</title>
+    <style define:vars={{ accent: portal.theme.accent, background: portal.theme.background, foreground: portal.theme.foreground }}>
+      :root {
+        color: var(--foreground);
+        background: var(--background);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1040px;
+        padding: 48px 20px 72px;
+      }
+
+      header {
+        display: grid;
+        gap: 16px;
+        padding: 40px 0 28px;
+        border-bottom: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 780px;
+        font-size: clamp(2.2rem, 5vw, 5rem);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      p {
+        max-width: 720px;
+        line-height: 1.65;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .links a,
+      .catalog-link {
+        border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+        border-radius: 6px;
+        padding: 10px 14px;
+        text-decoration: none;
+      }
+
+      .links a:hover,
+      .catalog-link:hover {
+        border-color: var(--accent);
+      }
+
+      .grid {
+        display: grid;
+        gap: 32px;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+        padding-top: 32px;
+      }
+
+      .chart-list {
+        display: grid;
+        gap: 10px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .chart-list a {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+        padding: 12px 0;
+        text-decoration: none;
+      }
+
+      pre {
+        overflow: auto;
+        border-left: 4px solid var(--accent);
+        padding-left: 18px;
+        white-space: pre-wrap;
+        line-height: 1.6;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding-top: 24px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>{portal.publicName}</h1>
+        <p>{portal.description}</p>
+        <nav class="links" aria-label="Links">
+          {portal.links.map((link) => <a href={link.url}>{link.label}</a>)}
+          <a class="catalog-link" href="source-catalog/source-manifest.json">source-manifest.json</a>
+        </nav>
+      </header>
+
+      <section class="grid">
+        <article>
+          <h2>{draft.artist.name}</h2>
+          <p>{draft.artist.summary}</p>
+          {draft.charts.map((chart) => (
+            <section id={chart.id}>
+              <h3>{chart.version.title}</h3>
+              <pre>{chart.rawText}</pre>
+            </section>
+          ))}
+        </article>
+        <aside>
+          <h2>Cifras publicadas</h2>
+          <ChartList charts={charts} />
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>
