@@ -1,0 +1,151 @@
+---
+import portal from "../../portal.config";
+
+const baseUrl = import.meta.env.BASE_URL;
+const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+const withBase = (path: string) => `${normalizedBaseUrl}${path.replace(/^\/+/, "")}`;
+const homeUrl = withBase("");
+const catalogUrl = withBase("source-catalog/");
+const manifestUrl = withBase("source-catalog/source-manifest.json");
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>HELP · {portal.publicName}</title>
+    <style>
+      :root {
+        color: #171a1d;
+        background: #f4f8f7;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(36, 82, 163, 0.08) 1px, transparent 1px) 0 0 / 42px 42px,
+          linear-gradient(180deg, rgba(23, 26, 29, 0.06) 1px, transparent 1px) 0 0 / 100% 42px,
+          #f4f8f7;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 920px;
+        padding: 44px 20px 72px;
+      }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 32px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      nav a {
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(23, 26, 29, 0.18);
+        border-radius: 6px;
+        padding: 10px 14px;
+        text-decoration: none;
+      }
+
+      h1 {
+        font-size: clamp(2.3rem, 6vw, 4.8rem);
+        line-height: 0.95;
+        margin: 0 0 18px;
+      }
+
+      h2 {
+        border-top: 1px solid rgba(23, 26, 29, 0.16);
+        font-size: 1.18rem;
+        margin: 34px 0 8px;
+        padding-top: 20px;
+      }
+
+      p,
+      li {
+        line-height: 1.72;
+      }
+
+      .lede {
+        color: rgba(23, 26, 29, 0.74);
+        font-size: 1.14rem;
+        max-width: 760px;
+      }
+
+      .note {
+        background: #fffaf0;
+        border: 1px solid rgba(196, 71, 47, 0.28);
+        border-radius: 8px;
+        margin-top: 26px;
+        padding: 16px 18px;
+      }
+
+      code {
+        background: rgba(36, 82, 163, 0.1);
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Navegação">
+        <a href={homeUrl}>Portal</a>
+        <a href={catalogUrl}>Import catalog</a>
+        <a href={manifestUrl}>source-manifest.json</a>
+        <a href={portal.repositoryUrl}>Repository</a>
+      </nav>
+
+      <h1>HELP</h1>
+      <p class="lede">
+        Este projeto é uma base para portais públicos de artistas que querem publicar cifras em Markdown
+        e gerar um catálogo estático importável pelo ecossistema achorde/AC15.
+      </p>
+
+      <section>
+        <h2>O que o portal faz</h2>
+        <p>
+          A home mostra as músicas publicadas, renderiza cada cifra com o mesmo motor visual usado no AC15
+          e permite pesquisar, transpor o tom e ajustar o tamanho da fonte sem alterar o arquivo original.
+        </p>
+      </section>
+
+      <section>
+        <h2>Onde editar conteúdo</h2>
+        <p>
+          O artista fica em <code>catalog/artist.md</code>. As cifras ficam em
+          <code>catalog/charts/&lt;musica&gt;/&lt;versao&gt;.md</code>, com frontmatter YAML e o corpo da
+          cifra logo abaixo.
+        </p>
+      </section>
+
+      <section>
+        <h2>Como importar no AC15</h2>
+        <p>
+          Use a URL do diretório <code>{catalogUrl}</code> no fluxo de catálogo de fonte do AC15. O arquivo
+          <code>source-manifest.json</code> aponta para os NDJSON gerados com artistas, obras, versões e cifras.
+        </p>
+      </section>
+
+      <section>
+        <h2>Como validar antes de publicar</h2>
+        <p>
+          Rode <code>pnpm validate</code> para conferir o catálogo e <code>pnpm build</code> para regenerar
+          os artefatos estáticos em <code>public/source-catalog/</code> e montar o site final.
+        </p>
+      </section>
+
+      <p class="note">
+        Este repositório deve continuar fácil de atualizar a partir da base. Em portais reais, personalize
+        principalmente <code>portal.config.ts</code>, <code>catalog/</code> e os tokens visuais mínimos.
+      </p>
+    </main>
+  </body>
+</html>

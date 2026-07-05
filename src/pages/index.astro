@@ -1,15 +1,22 @@
 ---
 import portal from "../../portal.config";
-import { ChartList } from "../components/ChartList";
+import { PortalCatalogReader } from "../components/PortalCatalogReader";
 import { loadCatalogDraft } from "../../scripts/catalog-core";
 
 const draft = await loadCatalogDraft();
 const charts = draft.charts.map((chart) => ({
   id: chart.id,
   title: chart.version.title,
+  workTitle: chart.work.title,
   sourceKey: chart.version.sourceKey,
-  href: `#${chart.id}`,
+  rawText: chart.rawText,
 }));
+const baseUrl = import.meta.env.BASE_URL;
+const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+const withBase = (path: string) => `${normalizedBaseUrl}${path.replace(/^\/+/, "")}`;
+const catalogUrl = withBase("source-catalog/");
+const manifestUrl = withBase("source-catalog/source-manifest.json");
+const helpUrl = withBase("help/");
 ---
 
 <!doctype html>
@@ -19,27 +26,31 @@ const charts = draft.charts.map((chart) => ({
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{portal.publicName}</title>
-    <style define:vars={{ accent: portal.theme.accent, background: portal.theme.background, foreground: portal.theme.foreground }}>
+    <style is:global define:vars={{ accent: portal.theme.accent, background: portal.theme.background, foreground: portal.theme.foreground }}>
       :root {
         color: var(--foreground);
-        background: var(--background);
+        background: #f4f8f7;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       body {
         margin: 0;
+        background:
+          linear-gradient(90deg, rgba(36, 82, 163, 0.08) 1px, transparent 1px) 0 0 / 42px 42px,
+          linear-gradient(180deg, rgba(23, 26, 29, 0.06) 1px, transparent 1px) 0 0 / 100% 42px,
+          #f4f8f7;
       }
 
       main {
         margin: 0 auto;
-        max-width: 1040px;
-        padding: 48px 20px 72px;
+        max-width: 1180px;
+        padding: 36px 20px 72px;
       }
 
       header {
         display: grid;
         gap: 16px;
-        padding: 40px 0 28px;
+        padding: 28px 0 26px;
         border-bottom: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
       }
 
@@ -67,48 +78,218 @@ const charts = draft.charts.map((chart) => ({
       }
 
       .links a,
-      .catalog-link {
+      .catalog-link,
+      .portal-catalog-actions a,
+      .portal-catalog-actions button {
+        background: rgba(255, 255, 255, 0.72);
         border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
         border-radius: 6px;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
         padding: 10px 14px;
         text-decoration: none;
       }
 
       .links a:hover,
-      .catalog-link:hover {
+      .catalog-link:hover,
+      .portal-catalog-actions a:hover,
+      .portal-catalog-actions button:hover {
         border-color: var(--accent);
       }
 
-      .grid {
+      .portal-reader {
         display: grid;
-        gap: 32px;
-        grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-        padding-top: 32px;
+        gap: 18px;
+        padding-top: 24px;
       }
 
-      .chart-list {
+      .portal-reader-toolbar {
+        align-items: end;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(240px, 1fr) auto auto;
+      }
+
+      .portal-search {
+        display: grid;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .portal-search input {
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+        border-radius: 6px;
+        color: inherit;
+        font: inherit;
+        min-height: 42px;
+        padding: 0 12px;
+      }
+
+      .portal-stepper {
+        align-items: center;
+        background: #fffaf0;
+        border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+        border-radius: 8px;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: auto 34px minmax(58px, auto) 34px auto;
+        min-height: 42px;
+        padding: 6px 8px;
+      }
+
+      .portal-stepper span,
+      .portal-stepper small {
+        color: color-mix(in srgb, var(--foreground) 64%, transparent);
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .portal-stepper strong {
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      .portal-stepper button {
+        align-items: center;
+        background: #171a1d;
+        border: 0;
+        border-radius: 6px;
+        color: #ffffff;
+        cursor: pointer;
+        display: inline-flex;
+        font: inherit;
+        font-size: 1.1rem;
+        height: 30px;
+        justify-content: center;
+        width: 34px;
+      }
+
+      .portal-stepper button:disabled {
+        cursor: not-allowed;
+        opacity: 0.35;
+      }
+
+      .portal-reader-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+      }
+
+      .portal-song-list,
+      .portal-chart-panel {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+        border-radius: 8px;
+      }
+
+      .portal-song-list {
+        align-self: start;
         display: grid;
         gap: 10px;
-        list-style: none;
-        margin: 0;
-        padding: 0;
+        padding: 14px;
       }
 
-      .chart-list a {
+      .portal-song-list-header {
+        align-items: center;
         display: flex;
         justify-content: space-between;
-        gap: 16px;
-        border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-        padding: 12px 0;
-        text-decoration: none;
       }
 
-      pre {
+      .portal-song-list h2 {
+        font-size: 1rem;
+        margin: 0;
+      }
+
+      .portal-song-list-header span {
+        color: #2452a3;
+        font-size: 0.84rem;
+        font-weight: 800;
+      }
+
+      .portal-song-buttons {
+        display: grid;
+        gap: 8px;
+      }
+
+      .portal-song-buttons button {
+        background: transparent;
+        border: 1px solid transparent;
+        border-bottom-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+        border-radius: 6px;
+        color: inherit;
+        cursor: pointer;
+        display: grid;
+        font: inherit;
+        gap: 4px;
+        padding: 10px;
+        text-align: left;
+      }
+
+      .portal-song-buttons button:hover,
+      .portal-song-buttons button.is-active {
+        background: #dceee9;
+        border-color: color-mix(in srgb, #2452a3 26%, transparent);
+      }
+
+      .portal-song-buttons span {
+        font-weight: 800;
+      }
+
+      .portal-song-buttons small {
+        color: color-mix(in srgb, var(--foreground) 62%, transparent);
+      }
+
+      .portal-chart-panel {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .portal-chart-header {
+        align-items: start;
+        border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        padding: 18px;
+      }
+
+      .portal-chart-header p {
+        color: #2452a3;
+        font-size: 0.82rem;
+        font-weight: 800;
+        margin: 0 0 6px;
+        text-transform: uppercase;
+      }
+
+      .portal-chart-header h2 {
+        font-size: clamp(1.45rem, 3vw, 2.45rem);
+        line-height: 1;
+        margin: 0;
+      }
+
+      .portal-catalog-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .portal-copy-message {
+        color: #2452a3;
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin: 0;
+        padding: 12px 18px 0;
+      }
+
+      .portal-tab-shell {
         overflow: auto;
-        border-left: 4px solid var(--accent);
-        padding-left: 18px;
-        white-space: pre-wrap;
-        line-height: 1.6;
+        padding: 20px 18px 32px;
       }
 
       @media (max-width: 760px) {
@@ -116,8 +297,21 @@ const charts = draft.charts.map((chart) => ({
           padding-top: 24px;
         }
 
-        .grid {
+        .portal-reader-toolbar,
+        .portal-reader-grid {
           grid-template-columns: 1fr;
+        }
+
+        .portal-stepper {
+          grid-template-columns: auto 34px minmax(58px, 1fr) 34px auto;
+        }
+
+        .portal-chart-header {
+          display: grid;
+        }
+
+        .portal-catalog-actions {
+          justify-content: flex-start;
         }
       }
     </style>
@@ -128,27 +322,19 @@ const charts = draft.charts.map((chart) => ({
         <h1>{portal.publicName}</h1>
         <p>{portal.description}</p>
         <nav class="links" aria-label="Links">
-          {portal.links.map((link) => <a href={link.url}>{link.label}</a>)}
-          <a class="catalog-link" href="source-catalog/source-manifest.json">source-manifest.json</a>
+          <a href={portal.repositoryUrl}>Repository</a>
+          <a href={catalogUrl}>Import catalog</a>
+          <a class="catalog-link" href={manifestUrl}>source-manifest.json</a>
+          <a href={helpUrl}>HELP</a>
         </nav>
       </header>
 
-      <section class="grid">
-        <article>
-          <h2>{draft.artist.name}</h2>
-          <p>{draft.artist.summary}</p>
-          {draft.charts.map((chart) => (
-            <section id={chart.id}>
-              <h3>{chart.version.title}</h3>
-              <pre>{chart.rawText}</pre>
-            </section>
-          ))}
-        </article>
-        <aside>
-          <h2>Cifras publicadas</h2>
-          <ChartList charts={charts} />
-        </aside>
-      </section>
+      <PortalCatalogReader
+        client:load
+        charts={charts}
+        catalogUrl={catalogUrl}
+        manifestUrl={manifestUrl}
+      />
     </main>
   </body>
 </html>

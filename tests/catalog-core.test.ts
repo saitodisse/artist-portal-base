@@ -28,11 +28,12 @@ describe("artist portal source catalog", () => {
 
   it("fails validation for duplicate IDs and empty charts", async () => {
     const draft = await loadCatalogDraft();
-    draft.charts.push({ ...draft.charts[0]!, rawText: "" });
+    const duplicatedChart = draft.charts[0]!;
+    draft.charts.push({ ...duplicatedChart, rawText: "" });
 
     expect(validateCatalogDraft(draft)).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("Duplicate ID: playableVersion:linha-aberta-demo"),
+        expect.stringContaining(`Duplicate ID: playableVersion:${duplicatedChart.id}`),
         expect.stringContaining("chord chart body must not be empty"),
       ]),
     );
