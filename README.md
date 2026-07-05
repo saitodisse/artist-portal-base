@@ -4,6 +4,14 @@ Base repository for static achorde artist portals. A portal publishes a human-re
 
 Published demo: <https://saitodisse.github.io/artist-portal-base/>
 
+## ACHORDE Docs Hub
+
+Use the ACHORDE Docs Hub to understand how artist portals, source catalogs, and the rendering packages fit into the broader ecosystem:
+
+- English: <https://musical-domain.vercel.app/en>
+- Portuguese: <https://musical-domain.vercel.app/pt-br>
+- Local dev server: <http://127.0.0.1:5286/>
+
 The base is meant to remain updateable. Create each real portal as a new repository with an `upstream` remote pointing back to this base, then pull base improvements with:
 
 ```bash
