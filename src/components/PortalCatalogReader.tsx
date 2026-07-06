@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { analyzeChordChartText } from "@achorde/tab-editor";
+import { ChordChartEditor } from "@achorde/tab-editor/react";
+import "@achorde/tab-editor/style.css";
 import { transposeChordSymbol } from "@achorde/tab-renderer";
 import { Tab, type TabStyleConfig } from "@achorde/tab-renderer/react";
+import { createChartMarkdownProposal } from "../lib/chart-editing";
 
 export type PortalChart = {
   id: string;
@@ -8,6 +12,8 @@ export type PortalChart = {
   workTitle: string;
   sourceKey: string;
   rawText: string;
+  originalMarkdown: string;
+  sourcePath: string;
 };
 
 export type PortalCatalogReaderProps = {
@@ -21,6 +27,7 @@ const MIN_FONT_SIZE = 14;
 const MAX_FONT_SIZE = 34;
 const MIN_TRANSPOSE = -11;
 const MAX_TRANSPOSE = 11;
+const DRAFT_STORAGE_PREFIX = "artist-portal-base:chart-draft:";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -45,6 +52,9 @@ export function PortalCatalogReader({
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [transposeNumber, setTransposeNumber] = useState(0);
   const [copyMessage, setCopyMessage] = useState("");
+  const [mode, setMode] = useState<"read" | "edit">("read");
+  const [draftText, setDraftText] = useState("");
+  const [hasStoredDraft, setHasStoredDraft] = useState(false);
 
   const visibleCharts = useMemo(
     () => charts.filter((chart) => includesQuery(chart, query)),
@@ -72,6 +82,25 @@ export function PortalCatalogReader({
       setSelectedId(selectedChart.id);
     }
   }, [selectedChart, selectedId]);
+
+  useEffect(() => {
+    if (!selectedChart) return;
+
+    const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
+    try {
+      const storedDraft = window.localStorage.getItem(storageKey);
+      if (storedDraft !== null) {
+        setDraftText(storedDraft);
+        setHasStoredDraft(true);
+        return;
+      }
+    } catch {
+      // Browsers can block localStorage; editing still works for the session.
+    }
+
+    setDraftText(selectedChart.rawText);
+    setHasStoredDraft(false);
+  }, [selectedChart]);
 
   if (!selectedChart) {
     return (
@@ -104,9 +133,24 @@ export function PortalCatalogReader({
     viewMode: "e",
     displayMode: "both",
   };
+  const editorPreviewStyle: Partial<TabStyleConfig> = {
+    ...tabStyle,
+    transposeNumber: 0,
+    fontSize: 16,
+    lineHeight: 0.18,
+  };
+  const editAnalysis = useMemo(() => analyzeChordChartText(draftText), [draftText]);
+  const hasChanges = draftText !== selectedChart.rawText;
+  const validationState =
+    editAnalysis.status === "invalid"
+      ? "invalido"
+      : editAnalysis.status === "warning"
+        ? "com avisos"
+        : "valido";
 
   function chooseChart(chart: PortalChart) {
     setSelectedId(chart.id);
+    setMode("read");
     window.history.replaceState(null, "", `#${chart.id}`);
   }
 
@@ -117,6 +161,76 @@ export function PortalCatalogReader({
     } catch {
       setCopyMessage("URL de importacao: " + catalogUrl);
     }
+  }
+
+  function saveDraft() {
+    const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
+    try {
+      window.localStorage.setItem(storageKey, draftText);
+      setHasStoredDraft(true);
+      setCopyMessage("Rascunho salvo neste navegador.");
+    } catch {
+      setCopyMessage("Nao foi possivel salvar no navegador; copie o Markdown.");
+    }
+  }
+
+  function discardDraft() {
+    const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore storage errors; the in-memory draft can still be reset.
+    }
+    setDraftText(selectedChart.rawText);
+    setHasStoredDraft(false);
+    setCopyMessage("Rascunho descartado.");
+  }
+
+  async function copyText(text: string, fallbackMessage: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyMessage(successMessage);
+    } catch {
+      setCopyMessage(fallbackMessage);
+    }
+  }
+
+  async function copyMarkdown() {
+    const proposal = createChartMarkdownProposal({
+      sourcePath: selectedChart.sourcePath,
+      originalMarkdown: selectedChart.originalMarkdown,
+      nextRawText: draftText,
+    });
+    await copyText(proposal.updatedMarkdown, "Markdown pronto para copiar.", "Markdown copiado.");
+  }
+
+  function downloadMarkdown() {
+    const proposal = createChartMarkdownProposal({
+      sourcePath: selectedChart.sourcePath,
+      originalMarkdown: selectedChart.originalMarkdown,
+      nextRawText: draftText,
+    });
+    const blob = new Blob([proposal.updatedMarkdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = selectedChart.sourcePath.split("/").pop() ?? `${selectedChart.id}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setCopyMessage("Markdown baixado.");
+  }
+
+  async function copyProposal() {
+    const proposal = createChartMarkdownProposal({
+      sourcePath: selectedChart.sourcePath,
+      originalMarkdown: selectedChart.originalMarkdown,
+      nextRawText: draftText,
+    });
+    await copyText(
+      JSON.stringify(proposal, null, 2),
+      "Proposta pronta para copiar.",
+      "Proposta copiada.",
+    );
   }
 
   return (
@@ -203,6 +317,22 @@ export function PortalCatalogReader({
               <h2>{selectedChart.workTitle}</h2>
             </div>
             <div className="portal-catalog-actions">
+              <div className="portal-mode-toggle" aria-label="Modo da cifra">
+                <button
+                  type="button"
+                  className={mode === "read" ? "is-active" : ""}
+                  onClick={() => setMode("read")}
+                >
+                  Ler
+                </button>
+                <button
+                  type="button"
+                  className={mode === "edit" ? "is-active" : ""}
+                  onClick={() => setMode("edit")}
+                >
+                  Editar
+                </button>
+              </div>
               <button type="button" onClick={() => void copyCatalogUrl()}>
                 Import catalog
               </button>
@@ -210,9 +340,58 @@ export function PortalCatalogReader({
             </div>
           </div>
           {copyMessage ? <p className="portal-copy-message">{copyMessage}</p> : null}
-          <div className="portal-tab-shell">
-            <Tab body={selectedChart.rawText} style={tabStyle} />
-          </div>
+          {mode === "read" ? (
+            <div className="portal-tab-shell">
+              <Tab body={selectedChart.rawText} style={tabStyle} />
+            </div>
+          ) : (
+            <div className="portal-editor-shell">
+              <div className="portal-editor-status" aria-label="Estado do rascunho">
+                {!hasChanges ? <span>sem alteracoes</span> : null}
+                {hasChanges && hasStoredDraft ? <span>rascunho local</span> : null}
+                {hasChanges ? <span data-status={editAnalysis.status}>{validationState}</span> : null}
+              </div>
+              <ChordChartEditor
+                value={draftText}
+                originalValue={selectedChart.rawText}
+                title={selectedChart.workTitle}
+                sourceKey={selectedChart.sourceKey}
+                onChange={setDraftText}
+                onSave={saveDraft}
+                previewStyle={editorPreviewStyle}
+                labels={{
+                  editorTitle: "Editor",
+                  previewTitle: "Preview",
+                  diagnosticsTitle: "Diagnosticos",
+                  save: "Salvar rascunho",
+                  valid: "Valido",
+                  warning: "Com avisos",
+                  invalid: "Invalido",
+                  noDiagnostics: "Sem diagnosticos.",
+                  loadingEditor: "Carregando editor.",
+                  fallbackEditor: "Editor de texto",
+                  chordsFound: "Acordes encontrados",
+                }}
+              />
+              <div className="portal-editor-actions">
+                <button type="button" onClick={saveDraft} disabled={!hasChanges}>
+                  Salvar rascunho
+                </button>
+                <button type="button" onClick={discardDraft} disabled={!hasChanges && !hasStoredDraft}>
+                  Descartar rascunho
+                </button>
+                <button type="button" onClick={() => void copyMarkdown()}>
+                  Copiar Markdown
+                </button>
+                <button type="button" onClick={downloadMarkdown}>
+                  Baixar Markdown
+                </button>
+                <button type="button" onClick={() => void copyProposal()}>
+                  Copiar proposta
+                </button>
+              </div>
+            </div>
+          )}
         </article>
       </div>
     </section>

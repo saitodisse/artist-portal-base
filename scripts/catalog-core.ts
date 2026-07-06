@@ -47,6 +47,8 @@ export type ChartDraft = {
   };
   editorial?: Record<string, unknown>;
   rawText: string;
+  originalMarkdown: string;
+  sourcePath: string;
   filePath: string;
 };
 
@@ -178,6 +180,8 @@ export async function loadCatalogDraft(baseDir = catalogDir): Promise<CatalogDra
             ? (frontmatter.editorial as Record<string, unknown>)
             : undefined,
         rawText: parsed.body.trim(),
+        originalMarkdown: content,
+        sourcePath: path.relative(repoRoot, filePath).split(path.sep).join("/"),
         filePath,
       } satisfies ChartDraft;
     }),

@@ -10,6 +10,8 @@ const charts = draft.charts.map((chart) => ({
   workTitle: chart.work.title,
   sourceKey: chart.version.sourceKey,
   rawText: chart.rawText,
+  originalMarkdown: chart.originalMarkdown,
+  sourcePath: chart.sourcePath,
 }));
 const baseUrl = import.meta.env.BASE_URL;
 const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -279,6 +281,27 @@ const helpUrl = withBase("help/");
         justify-content: flex-end;
       }
 
+      .portal-mode-toggle {
+        background: rgba(23, 26, 29, 0.06);
+        border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+        border-radius: 6px;
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+      }
+
+      .portal-mode-toggle button {
+        background: transparent;
+        border: 0;
+        min-height: 34px;
+        padding: 0 11px;
+      }
+
+      .portal-mode-toggle button.is-active {
+        background: #171a1d;
+        color: #ffffff;
+      }
+
       .portal-copy-message {
         color: #2452a3;
         font-size: 0.9rem;
@@ -290,6 +313,56 @@ const helpUrl = withBase("help/");
       .portal-tab-shell {
         overflow: auto;
         padding: 20px 18px 32px;
+      }
+
+      .portal-editor-shell {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .portal-editor-status,
+      .portal-editor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .portal-editor-status span {
+        background: #eef6f4;
+        border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+        border-radius: 999px;
+        color: #171a1d;
+        font-size: 0.82rem;
+        font-weight: 800;
+        padding: 6px 10px;
+      }
+
+      .portal-editor-status span[data-status="warning"] {
+        background: #fff4de;
+      }
+
+      .portal-editor-status span[data-status="invalid"] {
+        background: #ffe7e2;
+      }
+
+      .portal-editor-actions button {
+        background: #ffffff;
+        border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+        border-radius: 6px;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        padding: 10px 13px;
+      }
+
+      .portal-editor-actions button:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+
+      .portal-editor-actions button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
       }
 
       @media (max-width: 760px) {

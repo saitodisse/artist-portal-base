@@ -3,6 +3,7 @@ packages:
 
 minimumReleaseAgeExclude:
   - "@achorde/source-catalog@0.1.0"
+  - '@achorde/tab-editor@0.1.0'
 
 allowBuilds:
   esbuild: true
