@@ -12,6 +12,13 @@ Use the ACHORDE Docs Hub to understand how artist portals, source catalogs, and 
 - Portuguese: <https://achorde-musical-domain.vercel.app/pt-br>
 - Local dev server: <http://127.0.0.1:5286/>
 
+Relevant public packages for this base:
+
+- `@achorde/source-catalog` validates the static catalog contract.
+- `@achorde/tab-renderer` parses and renders published chord charts.
+- `@achorde/tab-editor` is the reusable editor for local drafts, diagnostics,
+  preview, Markdown export, and copyable change proposals.
+
 The base is meant to remain updateable. Create each real portal as a new repository with an `upstream` remote pointing back to this base, then pull base improvements with:
 
 ```bash
@@ -43,6 +50,12 @@ The generated v1 catalog includes:
 - `chordChart`
 
 `voicing` and `chordAlias` are optional future extensions.
+
+## Editing Model
+
+This base stays static: the browser can keep local chord-chart drafts and export
+Markdown or a change proposal, but it does not write to the remote repository by
+itself. The reusable editor surface for that flow is `@achorde/tab-editor`.
 
 ## Scripts
 
