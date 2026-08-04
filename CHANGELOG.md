@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-08-03
+
+### Fixed
+
+- Local portal development now forces `PUBLIC_BASE_PATH=/`, while production builds can continue using the repository prefix configured for GitHub Pages.
+
 ## 0.1.0 - 2026-07-04
 
 ### Added
