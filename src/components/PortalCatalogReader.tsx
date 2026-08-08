@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { analyzeChordChartText } from "@achorde/tab-editor";
-import { ChordChartEditor } from "@achorde/tab-editor/react";
-import "@achorde/tab-editor/style.css";
 import { transposeChordSymbol } from "@achorde/tab-renderer";
 import { Tab, type TabStyleConfig } from "@achorde/tab-renderer/react";
 import { createChartMarkdownProposal } from "../lib/chart-editing";
+import { selectChartReading } from "../lib/chart-reading";
 
 export type PortalChart = {
   id: string;
@@ -14,6 +13,7 @@ export type PortalChart = {
   rawText: string;
   originalMarkdown: string;
   sourcePath: string;
+  isLocal?: boolean;
 };
 
 export type PortalCatalogReaderProps = {
@@ -28,6 +28,29 @@ const MAX_FONT_SIZE = 34;
 const MIN_TRANSPOSE = -11;
 const MAX_TRANSPOSE = 11;
 const DRAFT_STORAGE_PREFIX = "artist-portal-base:chart-draft:";
+const NEW_CHARTS_STORAGE_KEY = "artist-portal-base:new-charts:v1";
+
+function SimpleChartEditor({
+  value,
+  onChange,
+  analysis,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  analysis: ReturnType<typeof analyzeChordChartText>;
+}) {
+  return (
+    <section className="portal-simple-editor" aria-label="Editor de cifra">
+      <textarea value={value} onChange={(event) => onChange(event.currentTarget.value)} spellCheck={false} aria-label="Texto da cifra" />
+      {analysis.diagnostics.length > 0 ? (
+        <details className="portal-editor-diagnostics">
+          <summary>Ajuda para corrigir ({analysis.diagnostics.length})</summary>
+          <ul>{analysis.diagnostics.map((item, index) => <li key={`${item.code}-${index}`}>{item.message}</li>)}</ul>
+        </details>
+      ) : null}
+    </section>
+  );
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -47,6 +70,7 @@ export function PortalCatalogReader({
   catalogUrl,
   manifestUrl,
 }: PortalCatalogReaderProps) {
+  const [allCharts, setAllCharts] = useState(charts);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(charts[0]?.id ?? "");
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
@@ -55,19 +79,22 @@ export function PortalCatalogReader({
   const [mode, setMode] = useState<"read" | "edit">("read");
   const [draftText, setDraftText] = useState("");
   const [hasStoredDraft, setHasStoredDraft] = useState(false);
+  const [viewingOriginal, setViewingOriginal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newText, setNewText] = useState("");
 
   const visibleCharts = useMemo(
-    () => charts.filter((chart) => includesQuery(chart, query)),
-    [charts, query],
+    () => allCharts.filter((chart) => includesQuery(chart, query)),
+    [allCharts, query],
   );
 
-  const selectedChart =
-    visibleCharts.find((chart) => chart.id === selectedId) ?? visibleCharts[0] ?? charts[0];
+  const selectedChart = visibleCharts.find((chart) => chart.id === selectedId) ?? visibleCharts[0];
 
   useEffect(() => {
     const selectFromHash = () => {
       const hashId = window.location.hash.replace(/^#/, "");
-      if (charts.some((chart) => chart.id === hashId)) {
+      if (allCharts.some((chart) => chart.id === hashId)) {
         setSelectedId(hashId);
       }
     };
@@ -75,7 +102,20 @@ export function PortalCatalogReader({
     selectFromHash();
     window.addEventListener("hashchange", selectFromHash);
     return () => window.removeEventListener("hashchange", selectFromHash);
-  }, [charts]);
+  }, [allCharts]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(NEW_CHARTS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.every((chart) => chart && typeof chart.id === "string" && typeof chart.rawText === "string")) {
+        setAllCharts((current) => [...current, ...parsed.filter((candidate) => !current.some((chart) => chart.id === candidate.id))]);
+      }
+    } catch {
+      // A new local song remains available for the current session if storage is unavailable.
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedChart && selectedChart.id !== selectedId) {
@@ -86,6 +126,7 @@ export function PortalCatalogReader({
   useEffect(() => {
     if (!selectedChart) return;
 
+    setViewingOriginal(false);
     const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
     try {
       const storedDraft = window.localStorage.getItem(storageKey);
@@ -101,6 +142,45 @@ export function PortalCatalogReader({
     setDraftText(selectedChart.rawText);
     setHasStoredDraft(false);
   }, [selectedChart]);
+
+  useEffect(() => {
+    if (!selectedChart || !draftText) return;
+
+    const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
+    if (draftText === selectedChart.rawText) {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // The equal in-memory text still is not treated as a local version.
+      }
+      setHasStoredDraft(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(storageKey, draftText);
+        setHasStoredDraft(true);
+      } catch {
+        setCopyMessage("A edição continua aberta, mas este aparelho não conseguiu salvá-la.");
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftText, selectedChart]);
+
+  if (!selectedChart && query.trim()) {
+    return (
+      <section className="portal-reader portal-reader-empty">
+        <label className="portal-search">
+          <span>Encontrar música</span>
+          <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} autoFocus />
+        </label>
+        <h2>Nenhuma música encontrada</h2>
+        <p>Tente outro nome ou limpe a busca.</p>
+      </section>
+    );
+  }
 
   if (!selectedChart) {
     return (
@@ -133,14 +213,15 @@ export function PortalCatalogReader({
     viewMode: "e",
     displayMode: "both",
   };
-  const editorPreviewStyle: Partial<TabStyleConfig> = {
-    ...tabStyle,
-    transposeNumber: 0,
-    fontSize: 16,
-    lineHeight: 0.18,
-  };
   const editAnalysis = useMemo(() => analyzeChordChartText(draftText), [draftText]);
   const hasChanges = draftText !== selectedChart.rawText;
+  const hasLocalVersion = selectedChart.isLocal || hasStoredDraft;
+  const reading = selectChartReading({
+    publishedText: selectedChart.rawText,
+    localText: hasStoredDraft ? draftText : null,
+    isLocalChart: selectedChart.isLocal,
+    viewingOriginal,
+  });
   const validationState =
     editAnalysis.status === "invalid"
       ? "invalido"
@@ -151,7 +232,42 @@ export function PortalCatalogReader({
   function chooseChart(chart: PortalChart) {
     setSelectedId(chart.id);
     setMode("read");
+    setViewingOriginal(false);
     window.history.replaceState(null, "", `#${chart.id}`);
+  }
+
+  function addLocalSong() {
+    const title = newTitle.trim();
+    const rawText = newText.trim();
+    if (!title || !rawText) {
+      setCopyMessage("Escreva o nome e a cifra antes de adicionar a música.");
+      return;
+    }
+    const slug = title
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "nova-musica";
+    const suffix = globalThis.crypto?.randomUUID?.().slice(0, 8) ?? String(Date.now());
+    const id = `local:${slug}:${suffix}`;
+    const sourcePath = `catalog/charts/${slug}/principal.md`;
+    const originalMarkdown = `---\nid: ${id}\nupdatedAt: ${new Date().toISOString()}\nwork:\n  id: ${id}\n  title: ${title}\n  slug: ${slug}\nversion:\n  title: Principal\n  slug: principal\n  kind: arrangement\n  sourceKey: C\n  instrumentId: guitar\n  tuningId: guitar-standard\n---\n${rawText}\n`;
+    const chart: PortalChart = { id, title: "Principal", workTitle: title, sourceKey: "C", rawText, originalMarkdown, sourcePath, isLocal: true };
+    setAllCharts((current) => [...current, chart].sort((left, right) => left.workTitle.localeCompare(right.workTitle)));
+    setSelectedId(id);
+    setMode("edit");
+    setIsCreating(false);
+    setNewTitle("");
+    setNewText("");
+    try {
+      const current = JSON.parse(window.localStorage.getItem(NEW_CHARTS_STORAGE_KEY) ?? "[]");
+      window.localStorage.setItem(NEW_CHARTS_STORAGE_KEY, JSON.stringify([...Array.isArray(current) ? current : [], chart]));
+      setHasStoredDraft(true);
+      setCopyMessage("Nova música salva neste aparelho. Ainda não enviada.");
+    } catch {
+      setCopyMessage("Nova música aberta nesta sessão. Este aparelho não conseguiu salvá-la.");
+    }
   }
 
   async function copyCatalogUrl() {
@@ -166,11 +282,15 @@ export function PortalCatalogReader({
   function saveDraft() {
     const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
     try {
+      if (draftText === selectedChart.rawText) {
+        window.localStorage.removeItem(storageKey);
+        setHasStoredDraft(false);
+        return;
+      }
       window.localStorage.setItem(storageKey, draftText);
       setHasStoredDraft(true);
-      setCopyMessage("Rascunho salvo neste navegador.");
     } catch {
-      setCopyMessage("Nao foi possivel salvar no navegador; copie o Markdown.");
+      setCopyMessage("Não foi possível salvar neste aparelho; copie o Markdown.");
     }
   }
 
@@ -183,7 +303,7 @@ export function PortalCatalogReader({
     }
     setDraftText(selectedChart.rawText);
     setHasStoredDraft(false);
-    setCopyMessage("Rascunho descartado.");
+    setViewingOriginal(false);
   }
 
   async function copyText(text: string, fallbackMessage: string, successMessage: string) {
@@ -237,11 +357,11 @@ export function PortalCatalogReader({
     <section className="portal-reader" aria-label="Leitor de cifras">
       <div className="portal-reader-toolbar">
         <label className="portal-search">
-          <span>Pesquisar</span>
+          <span>Encontrar música</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder="Musica, tom ou trecho da cifra"
+            placeholder="Digite o nome de uma música"
           />
         </label>
 
@@ -292,9 +412,10 @@ export function PortalCatalogReader({
       <div className="portal-reader-grid">
         <aside className="portal-song-list" aria-label="Cifras publicadas">
           <div className="portal-song-list-header">
-            <h2>Cifras publicadas</h2>
-            <span>{visibleCharts.length}/{charts.length}</span>
+            <h2>Músicas</h2>
+            <span>{visibleCharts.length}/{allCharts.length}</span>
           </div>
+          <button type="button" className="portal-add-song" onClick={() => setIsCreating(true)}>Adicionar música</button>
           <div className="portal-song-buttons">
             {visibleCharts.map((chart) => (
               <button
@@ -304,7 +425,7 @@ export function PortalCatalogReader({
                 onClick={() => chooseChart(chart)}
               >
                 <span>{chart.workTitle}</span>
-                <small>{chart.sourceKey} · {chart.title}</small>
+                <small>{hasStoredDraft && chart.id === selectedChart.id ? "Continue editando" : chart.title}</small>
               </button>
             ))}
           </div>
@@ -317,83 +438,80 @@ export function PortalCatalogReader({
               <h2>{selectedChart.workTitle}</h2>
             </div>
             <div className="portal-catalog-actions">
-              <div className="portal-mode-toggle" aria-label="Modo da cifra">
+              {mode === "read" ? (
                 <button
                   type="button"
-                  className={mode === "read" ? "is-active" : ""}
-                  onClick={() => setMode("read")}
+                  className="portal-primary-action"
+                  onClick={() => {
+                    setViewingOriginal(false);
+                    setMode("edit");
+                  }}
                 >
-                  Ler
+                  Editar cifra
                 </button>
-                <button
-                  type="button"
-                  className={mode === "edit" ? "is-active" : ""}
-                  onClick={() => setMode("edit")}
-                >
-                  Editar
-                </button>
-              </div>
-              <button type="button" onClick={() => void copyCatalogUrl()}>
-                Import catalog
-              </button>
-              <a href={manifestUrl}>source-manifest.json</a>
+              ) : null}
             </div>
           </div>
-          {copyMessage ? <p className="portal-copy-message">{copyMessage}</p> : null}
+          {mode === "read" && hasLocalVersion ? (
+            <p className="portal-copy-message">
+              {reading.version === "original"
+                ? "Você está vendo a versão original publicada."
+                : "Salvo neste aparelho · Ainda não enviado"}
+              {!selectedChart.isLocal ? (
+                <button type="button" onClick={() => setViewingOriginal((value) => !value)}>
+                  {reading.version === "original" ? "Ver minha versão" : "Ver versão original"}
+                </button>
+              ) : null}
+            </p>
+          ) : null}
+          {copyMessage ? <p className="portal-feedback-message" role="status">{copyMessage}</p> : null}
           {mode === "read" ? (
             <div className="portal-tab-shell">
-              <Tab body={selectedChart.rawText} style={tabStyle} />
+              <Tab body={reading.text} style={tabStyle} />
             </div>
           ) : (
             <div className="portal-editor-shell">
               <div className="portal-editor-status" aria-label="Estado do rascunho">
-                {!hasChanges ? <span>sem alteracoes</span> : null}
-                {hasChanges && hasStoredDraft ? <span>rascunho local</span> : null}
+                {selectedChart.isLocal || hasStoredDraft ? <span>Salvo neste aparelho · Ainda não enviado</span> : null}
+                {!hasChanges && !selectedChart.isLocal && !hasStoredDraft ? <span>sem alterações</span> : null}
                 {hasChanges ? <span data-status={editAnalysis.status}>{validationState}</span> : null}
               </div>
-              <ChordChartEditor
-                value={draftText}
-                originalValue={selectedChart.rawText}
-                title={selectedChart.workTitle}
-                sourceKey={selectedChart.sourceKey}
-                onChange={setDraftText}
-                onSave={saveDraft}
-                previewStyle={editorPreviewStyle}
-                labels={{
-                  editorTitle: "Editor",
-                  previewTitle: "Preview",
-                  diagnosticsTitle: "Diagnosticos",
-                  save: "Salvar rascunho",
-                  valid: "Valido",
-                  warning: "Com avisos",
-                  invalid: "Invalido",
-                  noDiagnostics: "Sem diagnosticos.",
-                  loadingEditor: "Carregando editor.",
-                  fallbackEditor: "Editor de texto",
-                  chordsFound: "Acordes encontrados",
-                }}
-              />
+              <SimpleChartEditor value={draftText} onChange={setDraftText} analysis={editAnalysis} />
               <div className="portal-editor-actions">
-                <button type="button" onClick={saveDraft} disabled={!hasChanges}>
-                  Salvar rascunho
+                <button
+                  type="button"
+                  className="portal-primary-action"
+                  onClick={() => {
+                    saveDraft();
+                    setViewingOriginal(false);
+                    setMode("read");
+                  }}
+                >
+                  Concluir edição
                 </button>
                 <button type="button" onClick={discardDraft} disabled={!hasChanges && !hasStoredDraft}>
                   Descartar rascunho
                 </button>
-                <button type="button" onClick={() => void copyMarkdown()}>
-                  Copiar Markdown
-                </button>
-                <button type="button" onClick={downloadMarkdown}>
-                  Baixar Markdown
-                </button>
-                <button type="button" onClick={() => void copyProposal()}>
-                  Copiar proposta
-                </button>
+                <details className="portal-advanced-actions">
+                  <summary>Opções avançadas</summary>
+                  <button type="button" onClick={() => void copyMarkdown()}>Copiar Markdown</button>
+                  <button type="button" onClick={downloadMarkdown}>Baixar Markdown</button>
+                  <button type="button" onClick={() => void copyProposal()}>Copiar proposta</button>
+                </details>
               </div>
             </div>
           )}
         </article>
       </div>
+      {isCreating ? (
+        <section className="portal-new-song" aria-label="Adicionar música">
+          <h2>Adicionar música</h2>
+          <p>Comece só com o nome e a cifra. Você pode completar os detalhes ao enviar para revisão.</p>
+          <label>Nome da música<input value={newTitle} onChange={(event) => setNewTitle(event.currentTarget.value)} autoFocus /></label>
+          <label>Cifra<textarea value={newText} onChange={(event) => setNewText(event.currentTarget.value)} spellCheck={false} /></label>
+          <div><button type="button" className="portal-primary-action" onClick={addLocalSong}>Salvar neste aparelho</button><button type="button" onClick={() => setIsCreating(false)}>Cancelar</button></div>
+        </section>
+      ) : null}
     </section>
   );
 }

@@ -232,6 +232,17 @@ const helpUrl = withBase("help/");
         text-align: left;
       }
 
+      .portal-add-song {
+        background: #fff;
+        border: 1px dashed var(--accent);
+        border-radius: 8px;
+        color: var(--foreground);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        min-height: 44px;
+      }
+
       .portal-song-buttons button:hover,
       .portal-song-buttons button.is-active {
         background: #dceee9;
@@ -310,6 +321,26 @@ const helpUrl = withBase("help/");
         padding: 12px 18px 0;
       }
 
+      .portal-copy-message button {
+        background: transparent;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        margin-left: 10px;
+        padding: 0;
+        text-decoration: underline;
+      }
+
+      .portal-feedback-message {
+        color: #2452a3;
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin: 0;
+        padding: 12px 18px 0;
+      }
+
       .portal-tab-shell {
         overflow: auto;
         padding: 20px 18px 32px;
@@ -326,6 +357,110 @@ const helpUrl = withBase("help/");
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
+      }
+
+      .portal-primary-action {
+        background: var(--accent) !important;
+        border-color: var(--accent) !important;
+        color: #fff !important;
+        font-weight: 800;
+        min-height: 44px;
+      }
+
+      .portal-simple-editor {
+        display: grid;
+        gap: 12px;
+      }
+
+      .portal-simple-editor textarea {
+        background: #fff;
+        border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+        border-radius: 8px;
+        min-height: 360px;
+        padding: 14px;
+      }
+
+      .portal-simple-editor textarea {
+        box-sizing: border-box;
+        color: inherit;
+        font: 16px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        resize: vertical;
+        width: 100%;
+      }
+
+      .portal-editor-diagnostics,
+      .portal-advanced-actions {
+        color: color-mix(in srgb, var(--foreground) 76%, transparent);
+        font-size: .9rem;
+      }
+
+      .portal-new-song {
+        background: #fff;
+        border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+        border-radius: 10px;
+        display: grid;
+        gap: 14px;
+        margin-top: 20px;
+        padding: 20px;
+      }
+
+      .portal-new-song h2,
+      .portal-new-song p {
+        margin: 0;
+      }
+
+      .portal-new-song label {
+        display: grid;
+        font-weight: 800;
+        gap: 7px;
+      }
+
+      .portal-new-song input,
+      .portal-new-song textarea {
+        border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+        border-radius: 7px;
+        color: inherit;
+        font: inherit;
+        min-height: 44px;
+        padding: 10px;
+      }
+
+      .portal-new-song textarea {
+        min-height: 200px;
+        resize: vertical;
+      }
+
+      .portal-new-song > div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .portal-new-song > div button:not(.portal-primary-action) {
+        background: #fff;
+        border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+        border-radius: 7px;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        min-height: 44px;
+        padding: 0 14px;
+      }
+
+      .portal-advanced-actions[open] {
+        display: grid;
+        gap: 8px;
+      }
+
+      .portal-advanced-actions button {
+        background: #fff;
+        border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+        border-radius: 6px;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        padding: 9px 12px;
+        text-align: left;
       }
 
       .portal-editor-status span {
@@ -394,20 +529,28 @@ const helpUrl = withBase("help/");
       <header>
         <h1>{portal.publicName}</h1>
         <p>{portal.description}</p>
-        <nav class="links" aria-label="Links">
-          <a href={portal.repositoryUrl}>Repository</a>
-          <a href={catalogUrl}>Import catalog</a>
-          <a class="catalog-link" href={manifestUrl}>source-manifest.json</a>
-          <a href={helpUrl}>HELP</a>
+        <nav class="links" aria-label="Navegação">
+          <a href="#musicas">Músicas</a>
+          <a href={helpUrl}>Ajuda</a>
+          <details>
+            <summary>Sobre este portal</summary>
+            <div class="portal-technical-links">
+              <a href={portal.repositoryUrl}>Repositório</a>
+              <a href={catalogUrl}>Catálogo para importar</a>
+              <a href={manifestUrl}>Detalhes técnicos</a>
+            </div>
+          </details>
         </nav>
       </header>
 
+      <div id="musicas">
       <PortalCatalogReader
         client:load
         charts={charts}
         catalogUrl={catalogUrl}
         manifestUrl={manifestUrl}
       />
+      </div>
     </main>
   </body>
 </html>

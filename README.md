@@ -53,9 +53,21 @@ The generated v1 catalog includes:
 
 ## Editing Model
 
-This base stays static: the browser can keep local chord-chart drafts and export
-Markdown or a change proposal, but it does not write to the remote repository by
-itself. The reusable editor surface for that flow is `@achorde/tab-editor`.
+This base stays static. People can find a song, edit the chord chart, and save a
+local draft without an account or Git knowledge. A local save is never a
+publication: the portal labels it as saved on this device until it is submitted.
+For a published song, the original remains available through `Ver versão original`;
+the saved local version is the default again when the page is reopened.
+
+The portable contribution package remains available for every Git host. A portal
+may optionally configure an external, self-hostable Contribution Gateway to
+assist a GitHub or GitLab contributor with creating a fork, branch, and review
+proposal. The gateway is not required for reading, editing, saving, or exporting
+a contribution, and the static source catalog remains pull-only.
+
+The reusable editor surface is `@achorde/tab-editor`; persistence, authored
+metadata, Git, and forge integrations belong to the portal or the optional
+gateway, not the editor package.
 
 ## Scripts
 
