@@ -19,7 +19,7 @@
     "portal:create-github": "tsx scripts/portal-create-github.ts"
   },
   "dependencies": {
-    "@achorde/source-catalog": "^0.2.0",
+    "@achorde/source-catalog": "^0.3.0",
     "@achorde/tab-editor": "^0.1.0",
     "@achorde/tab-renderer": "^0.8.5",
     "@astrojs/react": "^5.0.0",
