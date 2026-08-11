@@ -1,0 +1,62 @@
+---
+import portal from "../../portal.config";
+import { PortalCatalogReader } from "../components/PortalCatalogReader";
+import { loadCatalogDraft } from "../../scripts/catalog-core";
+
+const draft = await loadCatalogDraft();
+const charts = draft.charts.map((chart) => ({
+  id: chart.id,
+  title: chart.version.title,
+  workTitle: chart.work.title,
+  sourceKey: chart.version.sourceKey,
+  rawText: chart.rawText,
+  originalMarkdown: chart.originalMarkdown,
+  sourcePath: chart.sourcePath,
+}));
+const baseUrl = import.meta.env.BASE_URL;
+const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+const withBase = (path: string) => `${normalizedBaseUrl}${path.replace(/^\/+/, "")}`;
+const homeUrl = withBase("");
+const catalogUrl = withBase("source-catalog/");
+const manifestUrl = withBase("source-catalog/source-manifest.json");
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Editar cifras · {portal.publicName}</title>
+    <style is:global define:vars={{ accent: portal.theme.accent, foreground: portal.theme.foreground }}>
+      :root { color: var(--foreground); background: #f4f8f7; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; background: linear-gradient(90deg, rgba(36,82,163,.08) 1px, transparent 1px) 0 0 / 42px 42px, linear-gradient(180deg, rgba(23,26,29,.06) 1px, transparent 1px) 0 0 / 100% 42px, #f4f8f7; }
+      main { margin: 0 auto; max-width: 1180px; padding: 36px 20px 72px; }
+      header { display: flex; align-items: end; justify-content: space-between; gap: 18px; border-bottom: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent); padding: 28px 0 26px; }
+      h1, h2, p { margin-top: 0; } h1 { font-size: clamp(2.2rem, 5vw, 5rem); line-height: .95; margin-bottom: 10px; } p { line-height: 1.65; }
+      a { color: inherit; } .back-link { font-weight: 700; }
+      .portal-reader { display: grid; gap: 18px; padding-top: 24px; }
+      .portal-reader-toolbar { align-items: end; display: grid; gap: 12px; grid-template-columns: minmax(240px, 1fr) auto auto; }
+      .portal-search { display: grid; gap: 8px; font-size: .82rem; font-weight: 700; text-transform: uppercase; }
+      .portal-search input, .portal-simple-editor textarea, .portal-new-song input, .portal-new-song textarea { background: #fff; border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent); border-radius: 6px; color: inherit; font: inherit; padding: 10px 12px; }
+      .portal-search input { min-height: 42px; }
+      .portal-stepper { align-items: center; background: #fffaf0; border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent); border-radius: 8px; display: grid; gap: 8px; grid-template-columns: auto 34px minmax(58px,auto) 34px auto; min-height: 42px; padding: 6px 8px; }
+      .portal-stepper span, .portal-stepper small { color: color-mix(in srgb, var(--foreground) 64%, transparent); font-size: .78rem; font-weight: 700; white-space: nowrap; }.portal-stepper strong { font-size: .9rem; text-align: center; }
+      button, .portal-primary-action { border-radius: 6px; cursor: pointer; font: inherit; }.portal-stepper button { background: #171a1d; border: 0; color: #fff; font-size: 1.1rem; height: 30px; width: 34px; }.portal-stepper button:disabled, .portal-editor-actions button:disabled { cursor: not-allowed; opacity: .45; }
+      .portal-reader-grid { display: grid; gap: 18px; grid-template-columns: minmax(220px,320px) minmax(0,1fr); }.portal-song-list, .portal-chart-panel { background: rgba(255,255,255,.82); border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent); border-radius: 8px; }.portal-song-list { align-self: start; display: grid; gap: 10px; padding: 14px; }.portal-song-list-header { align-items: center; display: flex; justify-content: space-between; }.portal-song-list h2 { font-size: 1rem; margin: 0; }.portal-song-list-header span { color: #2452a3; font-size: .84rem; font-weight: 800; }
+      .portal-add-song { background: #fff; border: 1px dashed var(--accent); color: inherit; font-weight: 800; min-height: 44px; }.portal-song-buttons { display: grid; gap: 8px; }.portal-song-buttons button { background: transparent; border: 1px solid transparent; border-bottom-color: color-mix(in srgb, var(--foreground) 12%, transparent); color: inherit; display: grid; gap: 4px; padding: 10px; text-align: left; }.portal-song-buttons button:hover, .portal-song-buttons button.is-active { background: #dceee9; border-color: color-mix(in srgb, #2452a3 26%, transparent); }.portal-song-buttons span { font-weight: 800; }.portal-song-buttons small { color: color-mix(in srgb, var(--foreground) 62%, transparent); }
+      .portal-chart-panel { min-width: 0; overflow: hidden; }.portal-chart-header { border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent); padding: 18px; }.portal-chart-header p { color: #2452a3; font-size: .82rem; font-weight: 800; margin-bottom: 6px; text-transform: uppercase; }.portal-chart-header h2 { font-size: clamp(1.45rem,3vw,2.45rem); line-height: 1; margin: 0; }.portal-editor-shell { display: grid; gap: 14px; padding: 18px; }.portal-editor-status, .portal-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; }.portal-editor-status span { background: #eef6f4; border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent); border-radius: 999px; font-size: .82rem; font-weight: 800; padding: 6px 10px; }.portal-editor-status span[data-status="warning"] { background: #fff4de; }.portal-editor-status span[data-status="invalid"] { background: #ffe7e2; }
+      .portal-primary-action { background: var(--accent); border: 1px solid var(--accent); color: #fff; font-weight: 800; min-height: 44px; padding: 10px 13px; text-decoration: none; }.portal-simple-editor { display: grid; gap: 12px; }.portal-simple-editor textarea { box-sizing: border-box; font: 16px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-height: 420px; resize: vertical; width: 100%; }.portal-editor-actions button, .portal-advanced-actions button { background: #fff; border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent); color: inherit; padding: 10px 13px; }.portal-editor-actions button:hover:not(:disabled) { border-color: var(--accent); }.portal-advanced-actions[open] { display: grid; gap: 8px; }.portal-editor-diagnostics, .portal-advanced-actions { color: color-mix(in srgb, var(--foreground) 76%, transparent); font-size: .9rem; }
+      .portal-new-song { background: #fff; border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent); border-radius: 10px; display: grid; gap: 14px; margin-top: 20px; padding: 20px; }.portal-new-song h2, .portal-new-song p { margin: 0; }.portal-new-song label { display: grid; font-weight: 800; gap: 7px; }.portal-new-song textarea { min-height: 200px; resize: vertical; }.portal-new-song > div { display: flex; flex-wrap: wrap; gap: 10px; }
+      @media (max-width: 760px) { main { padding-top: 24px; } header, .portal-reader-toolbar, .portal-reader-grid { grid-template-columns: 1fr; display: grid; } .portal-stepper { grid-template-columns: auto 34px minmax(58px,1fr) 34px auto; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div><h1>Editar cifras</h1><p>As alterações ficam salvas neste aparelho até serem enviadas para revisão.</p></div>
+        <a class="back-link" href={homeUrl}>Voltar ao portal</a>
+      </header>
+      <PortalCatalogReader client:load charts={charts} catalogUrl={catalogUrl} manifestUrl={manifestUrl} readerUrl={homeUrl} editing />
+    </main>
+  </body>
+</html>

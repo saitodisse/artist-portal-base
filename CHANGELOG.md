@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-08-11
+
+### Added
+
+- Estado de leitura/edição tipado na URL, com rota `/edit/` e retorno ao leitor.
+- Seleção explícita entre leitura local, publicada e original.
+
+### Changed
+
+- O salvamento local continua limitado ao dispositivo e preserva a URL de leitura.
+
 ## 0.2.0 - 2026-08-08
 
 ### Added

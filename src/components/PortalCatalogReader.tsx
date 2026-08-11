@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { analyzeChordChartText } from "@achorde/tab-editor";
 import { transposeChordSymbol } from "@achorde/tab-renderer";
 import { Tab, type TabStyleConfig } from "@achorde/tab-renderer/react";
+import { NuqsAdapter } from "nuqs/adapters/react";
+import { parseAsBoolean, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { createChartMarkdownProposal } from "../lib/chart-editing";
 import { selectChartReading } from "../lib/chart-reading";
 
@@ -20,6 +22,9 @@ export type PortalCatalogReaderProps = {
   charts: PortalChart[];
   catalogUrl: string;
   manifestUrl: string;
+  editUrl?: string;
+  readerUrl?: string;
+  editing?: boolean;
 };
 
 const DEFAULT_FONT_SIZE = 21;
@@ -29,6 +34,16 @@ const MIN_TRANSPOSE = -11;
 const MAX_TRANSPOSE = 11;
 const DRAFT_STORAGE_PREFIX = "artist-portal-base:chart-draft:";
 const NEW_CHARTS_STORAGE_KEY = "artist-portal-base:new-charts:v1";
+const readingVersions = ["local", "published", "original"] as const;
+
+const routeStateParsers = {
+  chart: parseAsString,
+  q: parseAsString.withDefault(""),
+  transpose: parseAsInteger.withDefault(0),
+  font: parseAsInteger.withDefault(DEFAULT_FONT_SIZE),
+  version: parseAsStringLiteral(readingVersions).withDefault("local"),
+  new: parseAsBoolean.withDefault(false),
+};
 
 function SimpleChartEditor({
   value,
@@ -65,22 +80,23 @@ function includesQuery(chart: PortalChart, query: string) {
   );
 }
 
-export function PortalCatalogReader({
+export function PortalCatalogReader(props: PortalCatalogReaderProps) {
+  return <NuqsAdapter><PortalCatalogReaderContent {...props} /></NuqsAdapter>;
+}
+
+function PortalCatalogReaderContent({
   charts,
   catalogUrl,
   manifestUrl,
+  editUrl,
+  readerUrl,
+  editing = false,
 }: PortalCatalogReaderProps) {
   const [allCharts, setAllCharts] = useState(charts);
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(charts[0]?.id ?? "");
-  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
-  const [transposeNumber, setTransposeNumber] = useState(0);
+  const [{ chart: selectedId, q: query, transpose: transposeNumber, font: fontSize, version, new: isCreating }, setRouteState] = useQueryStates(routeStateParsers);
   const [copyMessage, setCopyMessage] = useState("");
-  const [mode, setMode] = useState<"read" | "edit">("read");
   const [draftText, setDraftText] = useState("");
   const [hasStoredDraft, setHasStoredDraft] = useState(false);
-  const [viewingOriginal, setViewingOriginal] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newText, setNewText] = useState("");
 
@@ -90,19 +106,6 @@ export function PortalCatalogReader({
   );
 
   const selectedChart = visibleCharts.find((chart) => chart.id === selectedId) ?? visibleCharts[0];
-
-  useEffect(() => {
-    const selectFromHash = () => {
-      const hashId = window.location.hash.replace(/^#/, "");
-      if (allCharts.some((chart) => chart.id === hashId)) {
-        setSelectedId(hashId);
-      }
-    };
-
-    selectFromHash();
-    window.addEventListener("hashchange", selectFromHash);
-    return () => window.removeEventListener("hashchange", selectFromHash);
-  }, [allCharts]);
 
   useEffect(() => {
     try {
@@ -119,14 +122,13 @@ export function PortalCatalogReader({
 
   useEffect(() => {
     if (selectedChart && selectedChart.id !== selectedId) {
-      setSelectedId(selectedChart.id);
+      void setRouteState({ chart: selectedChart.id });
     }
-  }, [selectedChart, selectedId]);
+  }, [selectedChart, selectedId, setRouteState]);
 
   useEffect(() => {
     if (!selectedChart) return;
 
-    setViewingOriginal(false);
     const storageKey = `${DRAFT_STORAGE_PREFIX}${selectedChart.id}`;
     try {
       const storedDraft = window.localStorage.getItem(storageKey);
@@ -174,7 +176,7 @@ export function PortalCatalogReader({
       <section className="portal-reader portal-reader-empty">
         <label className="portal-search">
           <span>Encontrar música</span>
-          <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} autoFocus />
+          <input value={query} onChange={(event) => void setRouteState({ q: event.currentTarget.value })} autoFocus />
         </label>
         <h2>Nenhuma música encontrada</h2>
         <p>Tente outro nome ou limpe a busca.</p>
@@ -218,9 +220,9 @@ export function PortalCatalogReader({
   const hasLocalVersion = selectedChart.isLocal || hasStoredDraft;
   const reading = selectChartReading({
     publishedText: selectedChart.rawText,
-    localText: hasStoredDraft ? draftText : null,
+    localText: version === "published" ? null : hasStoredDraft ? draftText : null,
     isLocalChart: selectedChart.isLocal,
-    viewingOriginal,
+    viewingOriginal: version === "original",
   });
   const validationState =
     editAnalysis.status === "invalid"
@@ -230,10 +232,11 @@ export function PortalCatalogReader({
         : "valido";
 
   function chooseChart(chart: PortalChart) {
-    setSelectedId(chart.id);
-    setMode("read");
-    setViewingOriginal(false);
-    window.history.replaceState(null, "", `#${chart.id}`);
+    void setRouteState({ chart: chart.id, version: "local" }, { history: "push" });
+  }
+
+  function setReadingVersion(nextVersion: (typeof readingVersions)[number]) {
+    void setRouteState({ version: nextVersion }, { history: "push" });
   }
 
   function addLocalSong() {
@@ -255,9 +258,7 @@ export function PortalCatalogReader({
     const originalMarkdown = `---\nid: ${id}\nupdatedAt: ${new Date().toISOString()}\nwork:\n  id: ${id}\n  title: ${title}\n  slug: ${slug}\nversion:\n  title: Principal\n  slug: principal\n  kind: arrangement\n  sourceKey: C\n  instrumentId: guitar\n  tuningId: guitar-standard\n---\n${rawText}\n`;
     const chart: PortalChart = { id, title: "Principal", workTitle: title, sourceKey: "C", rawText, originalMarkdown, sourcePath, isLocal: true };
     setAllCharts((current) => [...current, chart].sort((left, right) => left.workTitle.localeCompare(right.workTitle)));
-    setSelectedId(id);
-    setMode("edit");
-    setIsCreating(false);
+    void setRouteState({ chart: id, new: false, version: "local" }, { history: "push" });
     setNewTitle("");
     setNewText("");
     try {
@@ -303,7 +304,16 @@ export function PortalCatalogReader({
     }
     setDraftText(selectedChart.rawText);
     setHasStoredDraft(false);
-    setViewingOriginal(false);
+    void setRouteState({ version: "published" });
+  }
+
+  function getReaderUrl() {
+    if (!readerUrl) return null;
+    const nextSearch = new URLSearchParams({ chart: selectedChart.id, version: "local" });
+    if (query) nextSearch.set("q", query);
+    if (transposeNumber) nextSearch.set("transpose", String(transposeNumber));
+    if (fontSize !== DEFAULT_FONT_SIZE) nextSearch.set("font", String(fontSize));
+    return `${readerUrl}?${nextSearch.toString()}`;
   }
 
   async function copyText(text: string, fallbackMessage: string, successMessage: string) {
@@ -360,7 +370,7 @@ export function PortalCatalogReader({
           <span>Encontrar música</span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
+            onChange={(event) => void setRouteState({ q: event.currentTarget.value })}
             placeholder="Digite o nome de uma música"
           />
         </label>
@@ -369,7 +379,7 @@ export function PortalCatalogReader({
           <span>Tom</span>
           <button
             type="button"
-            onClick={() => setTransposeNumber((value) => clamp(value - 1, MIN_TRANSPOSE, MAX_TRANSPOSE))}
+            onClick={() => void setRouteState({ transpose: clamp(transposeNumber - 1, MIN_TRANSPOSE, MAX_TRANSPOSE) })}
             disabled={transposeNumber <= MIN_TRANSPOSE}
             aria-label="Diminuir tom"
           >
@@ -378,7 +388,7 @@ export function PortalCatalogReader({
           <strong>{visualKey}</strong>
           <button
             type="button"
-            onClick={() => setTransposeNumber((value) => clamp(value + 1, MIN_TRANSPOSE, MAX_TRANSPOSE))}
+            onClick={() => void setRouteState({ transpose: clamp(transposeNumber + 1, MIN_TRANSPOSE, MAX_TRANSPOSE) })}
             disabled={transposeNumber >= MAX_TRANSPOSE}
             aria-label="Aumentar tom"
           >
@@ -391,7 +401,7 @@ export function PortalCatalogReader({
           <span>Fonte</span>
           <button
             type="button"
-            onClick={() => setFontSize((value) => clamp(value - 1, MIN_FONT_SIZE, MAX_FONT_SIZE))}
+            onClick={() => void setRouteState({ font: clamp(fontSize - 1, MIN_FONT_SIZE, MAX_FONT_SIZE) })}
             disabled={fontSize <= MIN_FONT_SIZE}
             aria-label="Diminuir fonte"
           >
@@ -400,7 +410,7 @@ export function PortalCatalogReader({
           <strong>{fontSize}px</strong>
           <button
             type="button"
-            onClick={() => setFontSize((value) => clamp(value + 1, MIN_FONT_SIZE, MAX_FONT_SIZE))}
+            onClick={() => void setRouteState({ font: clamp(fontSize + 1, MIN_FONT_SIZE, MAX_FONT_SIZE) })}
             disabled={fontSize >= MAX_FONT_SIZE}
             aria-label="Aumentar fonte"
           >
@@ -415,7 +425,7 @@ export function PortalCatalogReader({
             <h2>Músicas</h2>
             <span>{visibleCharts.length}/{allCharts.length}</span>
           </div>
-          <button type="button" className="portal-add-song" onClick={() => setIsCreating(true)}>Adicionar música</button>
+          {editing ? <button type="button" className="portal-add-song" onClick={() => void setRouteState({ new: true }, { history: "push" })}>Adicionar música</button> : null}
           <div className="portal-song-buttons">
             {visibleCharts.map((chart) => (
               <button
@@ -438,34 +448,23 @@ export function PortalCatalogReader({
               <h2>{selectedChart.workTitle}</h2>
             </div>
             <div className="portal-catalog-actions">
-              {mode === "read" ? (
-                <button
-                  type="button"
-                  className="portal-primary-action"
-                  onClick={() => {
-                    setViewingOriginal(false);
-                    setMode("edit");
-                  }}
-                >
-                  Editar cifra
-                </button>
-              ) : null}
+              {!editing && editUrl ? <a className="portal-primary-action" href={`${editUrl}?chart=${encodeURIComponent(selectedChart.id)}&version=${version}`}>Editar cifra</a> : null}
             </div>
           </div>
-          {mode === "read" && hasLocalVersion ? (
+          {!editing && hasLocalVersion ? (
             <p className="portal-copy-message">
               {reading.version === "original"
                 ? "Você está vendo a versão original publicada."
                 : "Salvo neste aparelho · Ainda não enviado"}
               {!selectedChart.isLocal ? (
-                <button type="button" onClick={() => setViewingOriginal((value) => !value)}>
+                <button type="button" onClick={() => setReadingVersion(reading.version === "original" ? "local" : "original")}>
                   {reading.version === "original" ? "Ver minha versão" : "Ver versão original"}
                 </button>
               ) : null}
             </p>
           ) : null}
           {copyMessage ? <p className="portal-feedback-message" role="status">{copyMessage}</p> : null}
-          {mode === "read" ? (
+          {!editing ? (
             <div className="portal-tab-shell">
               <Tab body={reading.text} style={tabStyle} />
             </div>
@@ -478,17 +477,11 @@ export function PortalCatalogReader({
               </div>
               <SimpleChartEditor value={draftText} onChange={setDraftText} analysis={editAnalysis} />
               <div className="portal-editor-actions">
-                <button
-                  type="button"
-                  className="portal-primary-action"
-                  onClick={() => {
-                    saveDraft();
-                    setViewingOriginal(false);
-                    setMode("read");
-                  }}
-                >
-                  Concluir edição
-                </button>
+                {editing && getReaderUrl() ? (
+                  <a className="portal-primary-action" href={getReaderUrl() ?? undefined} onClick={saveDraft}>Salvar rascunho</a>
+                ) : (
+                  <button type="button" className="portal-primary-action" onClick={() => { saveDraft(); void setRouteState({ version: "local" }); }}>Concluir edição</button>
+                )}
                 <button type="button" onClick={discardDraft} disabled={!hasChanges && !hasStoredDraft}>
                   Descartar rascunho
                 </button>
@@ -509,7 +502,7 @@ export function PortalCatalogReader({
           <p>Comece só com o nome e a cifra. Você pode completar os detalhes ao enviar para revisão.</p>
           <label>Nome da música<input value={newTitle} onChange={(event) => setNewTitle(event.currentTarget.value)} autoFocus /></label>
           <label>Cifra<textarea value={newText} onChange={(event) => setNewText(event.currentTarget.value)} spellCheck={false} /></label>
-          <div><button type="button" className="portal-primary-action" onClick={addLocalSong}>Salvar neste aparelho</button><button type="button" onClick={() => setIsCreating(false)}>Cancelar</button></div>
+          <div><button type="button" className="portal-primary-action" onClick={addLocalSong}>Salvar neste aparelho</button><button type="button" onClick={() => void setRouteState({ new: false })}>Cancelar</button></div>
         </section>
       ) : null}
     </section>

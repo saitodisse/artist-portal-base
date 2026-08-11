@@ -1,6 +1,6 @@
 {
   "name": "artist-portal-base",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "description": "Base repository for static achorde artist portals and importable source catalogs.",
@@ -24,6 +24,7 @@
     "@achorde/tab-renderer": "^0.8.5",
     "@astrojs/react": "^5.0.0",
     "astro": "^5.0.0",
+    "nuqs": "^2.9.5",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "yaml": "^2.8.0"

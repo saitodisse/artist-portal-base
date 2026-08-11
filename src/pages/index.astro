@@ -19,6 +19,7 @@ const withBase = (path: string) => `${normalizedBaseUrl}${path.replace(/^\/+/, "
 const catalogUrl = withBase("source-catalog/");
 const manifestUrl = withBase("source-catalog/source-manifest.json");
 const helpUrl = withBase("help/");
+const editUrl = withBase("edit/");
 ---
 
 <!doctype html>
@@ -531,6 +532,7 @@ const helpUrl = withBase("help/");
         <p>{portal.description}</p>
         <nav class="links" aria-label="Navegação">
           <a href="#musicas">Músicas</a>
+          <a href={editUrl}>Editar cifras</a>
           <a href={helpUrl}>Ajuda</a>
           <details>
             <summary>Sobre este portal</summary>
@@ -549,6 +551,7 @@ const helpUrl = withBase("help/");
         charts={charts}
         catalogUrl={catalogUrl}
         manifestUrl={manifestUrl}
+        editUrl={editUrl}
       />
       </div>
     </main>
