@@ -1,119 +1,84 @@
 # Artist Portal Base
 
-Base repository for static achorde artist portals. A portal publishes a human-readable site and an importable read-only source catalog under `/source-catalog/`.
+Artist Portal Base is a static website template for one artist. It publishes a readable chord-chart portal and a read-only catalog for compatible apps.
 
-Published demo: <https://saitodisse.github.io/artist-portal-base/>
+Demo: <https://saitodisse.github.io/artist-portal-base/>
 
-## ACHORDE Docs Hub
+## What version 0.3.1 includes
 
-Use the ACHORDE Docs Hub to understand how artist portals, source catalogs, and the rendering packages fit into the broader ecosystem:
+- A chart reader with search, transposition, and font-size controls.
+- A separate `/edit/` route.
+- URL state for the selected chart, search, transposition, font size, reading version, and new-song flow.
+- Browser-only drafts saved after 500 ms.
+- A switch between a local draft and the published original.
+- A read-only Source Catalog under `/source-catalog/`.
 
-- English: <https://achorde-musical-domain.vercel.app/en>
-- Portuguese: <https://achorde-musical-domain.vercel.app/pt-br>
-- Local dev server: <http://127.0.0.1:5286/>
+The portal has no account, server storage, sync, or automatic publication. Think of it as a published songbook with a private pencil layer in the browser.
 
-Relevant public packages for this base:
+| Path | Purpose |
+| --- | --- |
+| `/` | Read published charts and local drafts |
+| `/edit/` | Edit a chart or create a local song |
+| `/help/` | Read the maintainer help page |
+| `/source-catalog/` | Import the read-only catalog |
 
-- `@achorde/source-catalog` validates the static catalog contract.
-- `@achorde/tab-renderer` parses and renders published chord charts.
-- `@achorde/tab-editor` is the reusable editor for local drafts, diagnostics,
-  preview, Markdown export, and copyable change proposals.
-
-The base is meant to remain updateable. Create each real portal as a new repository with an `upstream` remote pointing back to this base, then pull base improvements with:
+## Run and customize
 
 ```bash
+pnpm install
+pnpm dev
+```
+
+Open <http://127.0.0.1:5287/>. A real portal normally changes only:
+
+- `portal.config.ts` for identity, URLs, and theme tokens;
+- `catalog/artist.md` for the artist;
+- `catalog/charts/<song>/<version>.md` for published charts.
+
+Initialize those files with:
+
+```bash
+pnpm portal:init --source-id my-artist --name "My Artist"
+```
+
+Keep this repository as `upstream` if the portal should receive base updates:
+
+```bash
+git remote rename origin upstream
+git remote add origin https://github.com/my-org/my-artist-portal.git
 git fetch upstream
 git merge upstream/main
 ```
 
-## Repository Contract
+`pnpm portal:create-github` supports the GitHub CLI flow. Review its arguments first because it creates an external repository.
 
-Customize these areas in real portals:
+## Local drafts
 
-- `portal.config.ts`
-- `catalog/`
-- small theme tokens in `portal.config.ts`
+The reader and editor keep their state in the URL. Changed charts and new local songs are saved in `localStorage` after 500 ms. If storage is blocked, editing still works for the current session, but the draft may be lost when the page closes.
 
-Treat the rest of the codebase as updateable base code.
+`Save draft` returns from `/edit/` to the reader with the local version selected. The reader can then switch between the draft and the published original.
 
-## Catalog Shape
+Advanced copy and download actions are legacy handoff tools. They produce Markdown or the existing JSON proposal shape for manual review. They do **not** create a Contribution Protocol v2 bundle, contact a Contribution Gateway, open a branch, or create a pull request.
 
-- `catalog/artist.md` describes the artist, band, project, or community.
-- `catalog/charts/<song>/<version>.md` stores YAML frontmatter plus the raw chord chart body.
-- `public/source-catalog/` is generated and contains `source-manifest.json`, `checksums.json`, and `entities/*.ndjson`.
+## Source Catalog
 
-The generated v1 catalog includes:
+`pnpm build:catalog` writes `source-manifest.json`, `checksums.json`, and `entities/*.ndjson` to `public/source-catalog/`.
 
-- `artist`
-- `musicalWork`
-- `playableVersion`
-- `chordChart`
+The portal still publishes schema `1.0.0` with `artist`, `musicalWork`, `playableVersion`, and `chordChart` records. The `@achorde/source-catalog@0.3.0` dependency validates this contract but does not upgrade the output to schema 1.2.
 
-`voicing` and `chordAlias` are optional future extensions.
+Generation is not byte-deterministic yet. The build clock becomes `generatedAt` and the manifest version, so two builds of unchanged content can differ.
 
-## Editing Model
-
-This base stays static. People can find a song, edit the chord chart, and save a
-local draft without an account or Git knowledge. A local save is never a
-publication: the portal labels it as saved on this device until it is submitted.
-For a published song, the original remains available through `Ver versão original`;
-the saved local version is the default again when the page is reopened.
-
-The portable contribution package remains available for every Git host. A portal
-may optionally configure an external, self-hostable Contribution Gateway to
-assist a GitHub or GitLab contributor with creating a fork, branch, and review
-proposal. The gateway is not required for reading, editing, saving, or exporting
-a contribution, and the static source catalog remains pull-only.
-
-The reusable editor surface is `@achorde/tab-editor`; persistence, authored
-metadata, Git, and forge integrations belong to the portal or the optional
-gateway, not the editor package.
-
-## Scripts
+## Validate and deploy
 
 ```bash
 pnpm validate
-pnpm build:catalog
-pnpm build
 pnpm test
-pnpm portal:init --source-id my-artist --name "My Artist"
+pnpm typecheck
+pnpm build
 ```
 
-## Create a Portal With `gh`
-
-```bash
-git clone https://github.com/saitodisse/artist-portal-base.git my-artist-portal
-cd my-artist-portal
-git remote rename origin upstream
-pnpm portal:init --source-id my-artist --name "My Artist" --site-url https://my-org.github.io --repository-url https://github.com/my-org/my-artist-portal
-gh repo create my-org/my-artist-portal --public --source . --remote origin --push
-```
-
-## Create a Portal Without `gh`
-
-1. Create an empty public repository on GitHub.
-2. Clone this base locally and rename `origin` to `upstream`.
-3. Add the new repository as `origin`.
-4. Push `main`.
-
-```bash
-git clone https://github.com/saitodisse/artist-portal-base.git my-artist-portal
-cd my-artist-portal
-git remote rename origin upstream
-git remote add origin https://github.com/my-org/my-artist-portal.git
-pnpm portal:init --source-id my-artist --name "My Artist" --site-url https://my-org.github.io --repository-url https://github.com/my-org/my-artist-portal
-git push -u origin main
-```
-
-## GitHub Pages
-
-The included workflow builds and deploys with GitHub Pages. `astro.config.mjs` reads:
-
-- `PUBLIC_SITE_URL`
-- `PUBLIC_BASE_PATH`
-
-This supports both `/<repo>` hosting and custom domains.
+The included workflow deploys to GitHub Pages. `PUBLIC_SITE_URL` and `PUBLIC_BASE_PATH` support a repository path or custom domain. Publishing catalog changes still requires a maintainer to review and commit the files.
 
 ## Licenses
 
-Code is MIT. Initial demo content in `catalog/` is CC0-1.0 and fictional.
+The code uses the [MIT License](LICENSE). The fictional demo catalog uses [CC0-1.0](CONTENT-LICENSE.md). See [CHANGELOG.md](CHANGELOG.md) for release history.

@@ -1,6 +1,6 @@
 {
   "name": "artist-portal-base",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "type": "module",
   "description": "Base repository for static achorde artist portals and importable source catalogs.",

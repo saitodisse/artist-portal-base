@@ -1,15 +1,23 @@
 # Changelog
 
+## 0.3.1 - 2026-08-12
+
+### Documentation
+
+- Clarified the current 0.3 reading, editing, URL-state, and local-draft behavior.
+- Marked Markdown and JSON handoff as legacy tools, not Protocol v2 or Gateway submission.
+- Documented that the portal still publishes Source Catalog schema 1.0 and uses the build clock.
+
 ## 0.3.0 - 2026-08-11
 
 ### Added
 
-- Estado de leitura/edição tipado na URL, com rota `/edit/` e retorno ao leitor.
-- Seleção explícita entre leitura local, publicada e original.
+- Typed reading and editing state in the URL, with a separate `/edit/` route and a return to the reader.
+- An explicit choice between local, published, and original reading versions.
 
 ### Changed
 
-- O salvamento local continua limitado ao dispositivo e preserva a URL de leitura.
+- Local saves remain on the current device and preserve the reader URL.
 
 ## 0.2.0 - 2026-08-08
 

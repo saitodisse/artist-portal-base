@@ -10,7 +10,7 @@ const manifestUrl = withBase("source-catalog/source-manifest.json");
 ---
 
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
@@ -96,7 +96,7 @@ const manifestUrl = withBase("source-catalog/source-manifest.json");
   </head>
   <body>
     <main>
-      <nav aria-label="Navegação">
+      <nav aria-label="Navigation">
         <a href={homeUrl}>Portal</a>
         <a href={catalogUrl}>Import catalog</a>
         <a href={manifestUrl}>source-manifest.json</a>
@@ -105,46 +105,54 @@ const manifestUrl = withBase("source-catalog/source-manifest.json");
 
       <h1>HELP</h1>
       <p class="lede">
-        Este projeto é uma base para portais públicos de artistas que querem publicar cifras em Markdown
-        e gerar um catálogo estático importável pelo ecossistema achorde/AC15.
+        This project is a base for one-artist portals. It turns reviewed Markdown files into a readable
+        website and a static catalog that compatible apps can import.
       </p>
 
       <section>
-        <h2>O que o portal faz</h2>
+        <h2>What the portal does</h2>
         <p>
-          A home mostra as músicas publicadas, renderiza cada cifra com o mesmo motor visual usado no AC15
-          e permite pesquisar, transpor o tom e ajustar o tamanho da fonte sem alterar o arquivo original.
+          The home page reads published charts. People can search, transpose, change the font size, and
+          compare a private browser draft with the published original.
         </p>
       </section>
 
       <section>
-        <h2>Onde editar conteúdo</h2>
+        <h2>Where content lives</h2>
         <p>
-          O artista fica em <code>catalog/artist.md</code>. As cifras ficam em
-          <code>catalog/charts/&lt;musica&gt;/&lt;versao&gt;.md</code>, com frontmatter YAML e o corpo da
-          cifra logo abaixo.
+          The artist is in <code>catalog/artist.md</code>. Published charts are in
+          <code>catalog/charts/&lt;song&gt;/&lt;version&gt;.md</code>, with YAML frontmatter followed by the chart text.
         </p>
       </section>
 
       <section>
-        <h2>Como importar no AC15</h2>
+        <h2>How local editing works</h2>
         <p>
-          Use a URL do diretório <code>{catalogUrl}</code> no fluxo de catálogo de fonte do AC15. O arquivo
-          <code>source-manifest.json</code> aponta para os NDJSON gerados com artistas, obras, versões e cifras.
+          Use <code>/edit/</code> to save a draft in this browser. Saving does not publish or send it.
+          Advanced copy and download actions are legacy tools for manual review; no Gateway or Protocol v2
+          submission is configured.
         </p>
       </section>
 
       <section>
-        <h2>Como validar antes de publicar</h2>
+        <h2>How catalog import works</h2>
         <p>
-          Rode <code>pnpm validate</code> para conferir o catálogo e <code>pnpm build</code> para regenerar
-          os artefatos estáticos em <code>public/source-catalog/</code> e montar o site final.
+          Import <code>{catalogUrl}</code> in a compatible app. Its <code>source-manifest.json</code> points to
+          the generated artist, work, version, and chart records. This base still publishes schema 1.0.0.
+        </p>
+      </section>
+
+      <section>
+        <h2>How to validate a change</h2>
+        <p>
+          Run <code>pnpm validate</code>, <code>pnpm test</code>, <code>pnpm typecheck</code>, and
+          <code>pnpm build</code> before publishing.
         </p>
       </section>
 
       <p class="note">
-        Este repositório deve continuar fácil de atualizar a partir da base. Em portais reais, personalize
-        principalmente <code>portal.config.ts</code>, <code>catalog/</code> e os tokens visuais mínimos.
+        Keep real portals easy to update from this base. Change mainly <code>portal.config.ts</code>,
+        <code>catalog/</code>, and the small set of theme tokens.
       </p>
     </main>
   </body>
