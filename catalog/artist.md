@@ -10,4 +10,4 @@ links:
 updatedAt: 2026-07-04T12:00:00.000Z
 ---
 
-Banda Inventada e um artista ficticio. Este conteudo inicial e CC0 e deve ser substituido ao iniciar um portal real.
+Banda Inventada e um artista ficticio. Este conteudo inicial e publicado sob CC-BY-NC-SA-4.0 e deve ser substituido ao iniciar um portal real.

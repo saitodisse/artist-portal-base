@@ -29,6 +29,15 @@ export type ArtistDraft = {
   body: string;
 };
 
+export type WorkDraft = {
+  id: string;
+  title: string;
+  slug: string;
+  updatedAt: string;
+  sourcePath: string;
+  filePath: string;
+};
+
 export type ChartDraft = {
   id: string;
   updatedAt: string;
@@ -54,6 +63,7 @@ export type ChartDraft = {
 
 export type CatalogDraft = {
   artist: ArtistDraft;
+  works: WorkDraft[];
   charts: ChartDraft[];
 };
 
@@ -84,6 +94,20 @@ function requireObject(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function assertNoLegacyPublicationPolicyFields(value: unknown): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) assertNoLegacyPublicationPolicyFields(item);
+    return;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    if (key === "rights" || key === "evidence" || key === "evidenceId") {
+      throw new Error("New portal catalogs do not accept rights/evidence fields.");
+    }
+    assertNoLegacyPublicationPolicyFields(nested);
+  }
+}
+
 function parseMarkdownWithFrontmatter(content: string, filePath: string) {
   if (!content.startsWith("---\n")) {
     throw new Error(`${filePath} must start with YAML frontmatter.`);
@@ -99,6 +123,7 @@ function parseMarkdownWithFrontmatter(content: string, filePath: string) {
   const frontmatter = requireObject(parseYaml(yaml), `${filePath} frontmatter`);
 
   assertNoForbiddenSourceCatalogKeys(frontmatter);
+  assertNoLegacyPublicationPolicyFields(frontmatter);
 
   return { frontmatter, body };
 }
@@ -125,6 +150,10 @@ export async function loadCatalogDraft(baseDir = catalogDir): Promise<CatalogDra
   const parsedArtist = parseMarkdownWithFrontmatter(artistContent, artistPath);
   const artistFrontmatter = parsedArtist.frontmatter;
   const chartsDir = path.join(baseDir, "charts");
+  const worksDir = path.join(baseDir, "works");
+  const workFiles = (await stat(worksDir).then((value) => value.isDirectory()).catch(() => false))
+    ? await listMarkdownFiles(worksDir)
+    : [];
   const chartFiles = (await stat(chartsDir).then((value) => value.isDirectory()).catch(() => false))
     ? await listMarkdownFiles(chartsDir)
     : [];
@@ -150,6 +179,23 @@ export async function loadCatalogDraft(baseDir = catalogDir): Promise<CatalogDra
     updatedAt: requireString(artistFrontmatter.updatedAt, "artist.updatedAt"),
     body: parsedArtist.body.trim(),
   };
+
+  const works = await Promise.all(
+    workFiles.map(async (filePath) => {
+      const content = await readFile(filePath, "utf8");
+      const parsed = parseMarkdownWithFrontmatter(content, filePath);
+      const frontmatter = parsed.frontmatter;
+
+      return {
+        id: requireString(frontmatter.id, `${filePath} id`),
+        title: requireString(frontmatter.title, `${filePath} title`),
+        slug: requireString(frontmatter.slug, `${filePath} slug`),
+        updatedAt: requireString(frontmatter.updatedAt, `${filePath} updatedAt`),
+        sourcePath: path.relative(repoRoot, filePath).split(path.sep).join("/"),
+        filePath,
+      } satisfies WorkDraft;
+    }),
+  );
 
   const charts = await Promise.all(
     chartFiles.map(async (filePath) => {
@@ -189,6 +235,7 @@ export async function loadCatalogDraft(baseDir = catalogDir): Promise<CatalogDra
 
   return {
     artist,
+    works: works.sort((a, b) => a.id.localeCompare(b.id)),
     charts: charts.sort((a, b) => a.id.localeCompare(b.id)),
   };
 }
@@ -213,6 +260,7 @@ export function validateCatalogDraft(draft: CatalogDraft): string[] {
   const errors: string[] = [];
   const ids = new Set<string>();
   const works = new Set<string>();
+  const independentWorks = new Map<string, WorkDraft>();
 
   function addId(id: string, label: string) {
     if (ids.has(id)) {
@@ -229,12 +277,31 @@ export function validateCatalogDraft(draft: CatalogDraft): string[] {
 
   addId(`artist:${draft.artist.id}`, "artist");
 
+  for (const work of draft.works) {
+    addId(`musicalWork:${work.id}`, work.filePath);
+    if (independentWorks.has(work.id)) {
+      errors.push(`Duplicate musical work ID: ${work.id} (${work.filePath})`);
+    }
+    independentWorks.set(work.id, work);
+    works.add(work.id);
+
+    try {
+      createIsoDateTime(work.updatedAt);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   for (const chart of draft.charts) {
     addId(`playableVersion:${chart.id}`, chart.filePath);
     addId(`chordChart:${chart.id}`, chart.filePath);
     if (!works.has(chart.work.id)) {
-      works.add(chart.work.id);
-      addId(`musicalWork:${chart.work.id}`, chart.filePath);
+      if (draft.works.length > 0) {
+        errors.push(`${chart.filePath} references unknown musical work: ${chart.work.id}.`);
+      } else {
+        works.add(chart.work.id);
+        addId(`musicalWork:${chart.work.id}`, chart.filePath);
+      }
     }
 
     if (!chart.rawText.trim()) {
@@ -300,6 +367,23 @@ export async function buildCatalogOutput(draft?: CatalogDraft): Promise<CatalogB
   const workById = new Map<string, SourceCatalogEnvelope>();
   const playableVersions: SourceCatalogEnvelope[] = [];
   const chordCharts: SourceCatalogEnvelope[] = [];
+
+  for (const work of draft.works) {
+    workById.set(
+      work.id,
+      envelope(
+        work.id,
+        "musicalWork",
+        {
+          title: work.title,
+          slug: work.slug,
+          artistSlug: draft.artist.slug,
+          identityKey: work.id,
+        },
+        work.updatedAt,
+      ),
+    );
+  }
 
   for (const chart of draft.charts) {
     if (!workById.has(chart.work.id)) {
@@ -388,6 +472,8 @@ export async function buildCatalogOutput(draft?: CatalogDraft): Promise<CatalogB
     schemaVersion: portal.publication.schemaVersion,
     mode: "readonly",
     generatedAt,
+    contentLicense: portal.publication.contentLicense,
+    operator: portal.operator,
     files: manifestFiles,
     capabilities: {
       pull: true,

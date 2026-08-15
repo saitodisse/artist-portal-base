@@ -39,6 +39,43 @@ describe("artist portal source catalog", () => {
     );
   });
 
+  it("keeps independent musical work metadata after its last chart is removed", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "artist-portal-"));
+    await mkdir(path.join(dir, "works", "demo"), { recursive: true });
+    await writeFile(
+      path.join(dir, "artist.md"),
+      [
+        "---",
+        "id: demo",
+        "name: Demo",
+        "slug: demo",
+        "summary: Demo",
+        "updatedAt: 2026-07-04T12:00:00.000Z",
+        "---",
+        "Demo",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(dir, "works", "demo", "demo-work.md"),
+      [
+        "---",
+        "id: demo-work",
+        "title: Demo Work",
+        "slug: demo-work",
+        "updatedAt: 2026-07-04T12:00:00.000Z",
+        "---",
+        "",
+      ].join("\n"),
+    );
+
+    const output = await buildCatalogOutput(await loadCatalogDraft(dir));
+    const workFile = output.files.find((file) => file.url === "entities/musical-works.ndjson");
+    const chartFile = output.files.find((file) => file.url === "entities/chord-charts.ndjson");
+
+    expect(workFile?.content).toContain('"sourceRecordId":"demo-work"');
+    expect(chartFile?.content).toBe("\n");
+  });
+
   it("rejects forbidden keys in frontmatter", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "artist-portal-"));
     await mkdir(path.join(dir, "charts", "demo"), { recursive: true });
@@ -57,5 +94,48 @@ Demo
     );
 
     await expect(loadCatalogDraft(dir)).rejects.toThrow("Forbidden source catalog key: email");
+  });
+
+  it("rejects legacy publication policy fields in frontmatter", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "artist-portal-"));
+    await mkdir(path.join(dir, "charts", "demo"), { recursive: true });
+    await writeFile(
+      path.join(dir, "artist.md"),
+      [
+        "---",
+        "id: demo",
+        "name: Demo",
+        "slug: demo",
+        "summary: Demo",
+        "updatedAt: 2026-07-04T12:00:00.000Z",
+        "---",
+        "Demo",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(dir, "charts", "demo", "song.md"),
+      [
+        "---",
+        "id: demo-song",
+        "updatedAt: 2026-07-04T12:00:00.000Z",
+        "work:",
+        "  id: demo-work",
+        "  title: Demo Work",
+        "  slug: demo-work",
+        "version:",
+        "  title: Demo",
+        "  slug: demo",
+        "  kind: arrangement",
+        "  sourceKey: C",
+        "  instrumentId: guitar",
+        "  tuningId: guitar-standard",
+        "rights:",
+        "  kind: direct-permission",
+        "---",
+        "C",
+      ].join("\n"),
+    );
+
+    await expect(loadCatalogDraft(dir)).rejects.toThrow("rights/evidence");
   });
 });

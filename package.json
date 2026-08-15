@@ -1,6 +1,6 @@
 {
   "name": "artist-portal-base",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": false,
   "type": "module",
   "description": "Base repository for static achorde artist portals and importable source catalogs.",
@@ -19,7 +19,7 @@
     "portal:create-github": "tsx scripts/portal-create-github.ts"
   },
   "dependencies": {
-    "@achorde/source-catalog": "^0.3.0",
+    "@achorde/source-catalog": "^0.4.0",
     "@achorde/tab-editor": "^0.1.0",
     "@achorde/tab-renderer": "^0.8.5",
     "@astrojs/react": "^5.0.0",

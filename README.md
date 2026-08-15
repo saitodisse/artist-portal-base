@@ -4,7 +4,7 @@ Artist Portal Base is a static website template for one artist. It publishes a r
 
 Demo: <https://saitodisse.github.io/artist-portal-base/>
 
-## What version 0.3.1 includes
+## What version 0.3.2 includes
 
 - A chart reader with search, transposition, and font-size controls.
 - A separate `/edit/` route.
@@ -33,6 +33,7 @@ Open <http://127.0.0.1:5287/>. A real portal normally changes only:
 
 - `portal.config.ts` for identity, URLs, and theme tokens;
 - `catalog/artist.md` for the artist;
+- `catalog/works/<artist>/<work>.md` for work metadata that must remain after a chart takedown;
 - `catalog/charts/<song>/<version>.md` for published charts.
 
 Initialize those files with:
@@ -58,15 +59,15 @@ The reader and editor keep their state in the URL. Changed charts and new local 
 
 `Save draft` returns from `/edit/` to the reader with the local version selected. The reader can then switch between the draft and the published original.
 
-Advanced copy and download actions are legacy handoff tools. They produce Markdown or the existing JSON proposal shape for manual review. They do **not** create a Contribution Protocol v2 bundle, contact a Contribution Gateway, open a branch, or create a pull request.
+Advanced copy and download actions are legacy handoff tools. They produce Markdown or the existing JSON proposal shape for manual review. They do **not** create a Contribution Protocol v3 bundle, contact a Contribution Gateway, open a branch, or create a pull request.
 
 ## Source Catalog
 
 `pnpm build:catalog` writes `source-manifest.json`, `checksums.json`, and `entities/*.ndjson` to `public/source-catalog/`.
 
-The portal still publishes schema `1.0.0` with `artist`, `musicalWork`, `playableVersion`, and `chordChart` records. The `@achorde/source-catalog@0.3.0` dependency validates this contract but does not upgrade the output to schema 1.2.
+The portal publishes schema `1.3.0` with `artist`, `musicalWork`, `playableVersion`, and `chordChart` records. The manifest declares the fixed `CC-BY-NC-SA-4.0` content license and the operator's `name` and `noticeUrl`. New catalogs contain no per-chart rights or evidence objects.
 
-Generation is not byte-deterministic yet. The build clock becomes `generatedAt` and the manifest version, so two builds of unchanged content can differ.
+The public catalog is read-only. Keep each work in `catalog/works/` independently from its charts so a rightsholder or authorized representative can request removal of a chart, version, page, and body while the artist and musical work metadata remain. Removal ends distribution and future updates at this origin, while already imported AC15 copies remain local.
 
 ## Validate and deploy
 
@@ -81,4 +82,4 @@ The included workflow deploys to GitHub Pages. `PUBLIC_SITE_URL` and `PUBLIC_BAS
 
 ## Licenses
 
-The code uses the [MIT License](LICENSE). The fictional demo catalog uses [CC0-1.0](CONTENT-LICENSE.md). See [CHANGELOG.md](CHANGELOG.md) for release history.
+The code uses the [MIT License](LICENSE). The fictional demo catalog declares [CC-BY-NC-SA-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). See the operator notice channel in `portal.config.ts` and [CHANGELOG.md](CHANGELOG.md) for release history.

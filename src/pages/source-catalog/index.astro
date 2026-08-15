@@ -139,6 +139,11 @@ const checksumsUrl = withBase("source-catalog/checksums.json");
         O manifesto descreve quais arquivos NDJSON devem ser baixados, seus checksums e o modo somente leitura
         do catálogo.
       </p>
+      <p>
+        O conteúdo editorial publicado usa <strong>{portal.publication.contentLicense}</strong>. O operador é
+        <strong>{portal.operator.name}</strong>; notificações devem usar <a href={portal.operator.noticeUrl}>este canal</a>.
+        Uma retirada encerra a distribuição e as futuras atualizações na origem; cópias já importadas permanecem no dispositivo do usuário.
+      </p>
     </main>
     <script>
       const copyButton = document.querySelector<HTMLButtonElement>("#copy-catalog-url");

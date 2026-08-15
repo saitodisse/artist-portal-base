@@ -11,4 +11,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Catalog validation passed: ${draft.charts.length} chart(s).`);
+console.log(`Catalog validation passed: ${draft.works.length} work(s), ${draft.charts.length} chart(s).`);

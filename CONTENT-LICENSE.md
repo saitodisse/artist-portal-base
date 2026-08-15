@@ -1,5 +1,5 @@
 # Demo Content License
 
-The initial demo content under `catalog/` is released under CC0-1.0.
+The initial fictional content under `catalog/` is published under `CC-BY-NC-SA-4.0`.
 
-It is fictional and exists only to demonstrate the repository shape, validation, catalog generation, and static site. Replace it when creating a real portal.
+The license applies to editorial content declared by this portal, not to the software (which remains MIT). The operator and notice channel are recorded in `portal.config.ts` and the generated Source Catalog manifest.

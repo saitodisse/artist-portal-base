@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@achorde/source-catalog':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.4.0
+        version: 0.4.0
       '@achorde/tab-editor':
         specifier: ^0.1.0
         version: 0.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -60,8 +60,8 @@ packages:
   '@achorde/musical-domain@0.5.3':
     resolution: {integrity: sha512-N2Dw3k1rfx3B8yj6H8F7cDejVOhd5k1DgHWcBSn46nFTg7NetLcvxVxoR4ygy9/bOnd+7yioSm/79KdB7Ngiqg==}
 
-  '@achorde/source-catalog@0.3.0':
-    resolution: {integrity: sha512-B3ZUTEozLhIEjTOoi0LUw5XOTPEKNyXlwoeZrAsDOXipxzURQ2JhEgU2XJIYOTu2XJ0O6jdsC8pju0+NMOd1+Q==}
+  '@achorde/source-catalog@0.4.0':
+    resolution: {integrity: sha512-5gDSJumED0RWXhiblMsKcckEzMqsQyNk+DFqe+p0gzE/P/5SLvxd4ce6mCQTCFnII3yDsyZC+yA8w1m17PHySQ==}
 
   '@achorde/tab-editor@0.1.0':
     resolution: {integrity: sha512-1FoQlnDkkZ/nK+Hv6V6hQ5J/zVO2al97f4P698RXA+WdXpTX0IrrkDbqF0qbavZOEmaPsfdl1wXQpjizC9hCIA==}
@@ -2459,7 +2459,7 @@ snapshots:
 
   '@achorde/musical-domain@0.5.3': {}
 
-  '@achorde/source-catalog@0.3.0': {}
+  '@achorde/source-catalog@0.4.0': {}
 
   '@achorde/tab-editor@0.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:

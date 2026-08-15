@@ -6,6 +6,10 @@ export type PortalConfig = {
   siteUrl: string;
   basePath: string;
   repositoryUrl: string;
+  operator: {
+    name: string;
+    noticeUrl: string;
+  };
   links: Array<{ label: string; url: string }>;
   theme: {
     accent: string;
@@ -13,9 +17,9 @@ export type PortalConfig = {
     foreground: string;
   };
   publication: {
-    schemaVersion: string;
+    schemaVersion: "1.3.0";
     license: string;
-    contentLicense: string;
+    contentLicense: "CC-BY-NC-SA-4.0";
   };
 };
 
@@ -27,6 +31,10 @@ const portalConfig = {
   siteUrl: "https://saitodisse.github.io",
   basePath: "/artist-portal-base",
   repositoryUrl: "https://github.com/saitodisse/artist-portal-base",
+  operator: {
+    name: "Demo Artist Portal operator",
+    noticeUrl: "https://github.com/saitodisse/artist-portal-base/issues",
+  },
   links: [
     { label: "Repository", url: "https://github.com/saitodisse/artist-portal-base" },
     { label: "Import catalog", url: "source-catalog/" },
@@ -37,9 +45,9 @@ const portalConfig = {
     foreground: "#1e1d1a",
   },
   publication: {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.3.0",
     license: "MIT",
-    contentLicense: "CC0-1.0",
+    contentLicense: "CC-BY-NC-SA-4.0",
   },
 } satisfies PortalConfig;
 
